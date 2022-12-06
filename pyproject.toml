@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "training-raster-clipper"
 version = "0.1.0"
-description = "Intersect rasters with classified polygons"
-authors = ["eschalk"]
+description = "Intersects rasters with classified polygons"
+authors = ["Etienne Schalk <eschalk@argans.eu>"]
 readme = "README.md"
+packages = [{include = "training_raster_clipper"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -13,7 +14,7 @@ geopandas = "^0.12.1"
 rasterio = "^1.3.4"
 rioxarray = "^0.13.1"
 xarray = "^2022.12.0"
-
+matplotlib = "^3.6.2"
 
 [build-system]
 requires = ["poetry-core"]
