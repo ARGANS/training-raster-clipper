@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "clipper"
+name = "training-raster-clipper"
 version = "0.1.0"
 description = "Intersect rasters with classified polygons"
 authors = ["eschalk"]
