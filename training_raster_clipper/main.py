@@ -17,28 +17,45 @@ Use RGB rasters (find band naming convention) in `S2A_MSIL2A_20221116T105321_N04
 import argparse
 import datetime
 from pathlib import Path
-from typing import Dict, Iterable, List, NoReturn, Set, Tuple, Union, Optional, Literal
+from typing import (
+    Dict,
+    Iterable,
+    List,
+    NoReturn,
+    Set,
+    Tuple,
+    Union,
+    Optional,
+    Literal,
+    Sequence,
+)
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import rasterio
 import rioxarray
-from rioxarray.merge import merge_arrays
 import xarray as xr
-import os
 from pprint import pformat
 import logging
 
+import numpy as np
+
 from enum import Enum
 
+config = {
+    "plot": False,
+}
+
+
 class Color(Enum):
-    RED = 2
-    GREEN = 3
-    BLUE = 4
+    RED = "04"
+    GREEN = "03"
+    BLUE = "02"
+
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     args = parse_arguments()
     logging.info(args)
@@ -52,9 +69,9 @@ def main():
 
     produce_clips(rasters, polygons, csv_output_path)
 
-    logging.debug(raster_input_path)
-    logging.debug(polygons_input_path)
-    logging.debug(csv_output_path)
+    logging.info(raster_input_path)
+    logging.info(polygons_input_path)
+    logging.info(csv_output_path)
 
 
 def parse_arguments():
@@ -64,7 +81,7 @@ def parse_arguments():
     assert args.raster_input_path, "Missing argument: raster_input_path"
     assert args.polygons_input_path, "Missing argument: polygons_input_path"
     assert args.csv_output_path, "Missing argument: csv_output_path"
-    
+
     return args
 
 
@@ -80,77 +97,107 @@ def build_argument_parser() -> argparse.ArgumentParser:
 
 """
 Example input path: `S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE`
-
+`
 S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.
 L2A_T31TCJ_A038658_20221116T105603
 """
 
 
 def read_sentinel_data(
-    sentinel_product_location: Path, 
-    *, 
-    resolution: Optional[Literal[60] | Literal[20] | Literal[10]] = 60
-) -> xr.Dataset:
+    sentinel_product_location: Path,
+    *,
+    resolution: Optional[Literal[60] | Literal[20] | Literal[10]] = 60,
+) -> xr.DataArray:
     """Loads sentinel product
 
     Args:
         sentinel_product_location (Path): Location of the .SAFE folder containing a Sentinel-2 product.
 
     Returns:
-        xr.Dataset: A dataset containing the 3 RGB bands from the visible spectrum
+        xr.DataArray: A DataArray containing the 3 RGB bands from the visible spectrum
     """
 
-    granule_path = sentinel_product_location / 'GRANULE'
-
-    granule_subfolders = os.listdir(granule_path)
-
-    # TODO eschalk: Can it contains 0 or 1+ elements? Default: use the first one 
-    assert len(granule_subfolders) == 1, "Expected exactly one subfolder in GRANULE"
-
-    granule_subfolder = Path(granule_subfolders[0]) 
-
-    resolution_path = granule_path / granule_subfolder / 'IMG_DATA' / f'R{resolution}m'
-
-    resolution_subfolders = set(os.listdir(resolution_path))
-
+    # Assumes that the glob will return only one subfolder
     band_file_paths = {
-        color_enum: resolution_path / next(iter({x for x in resolution_subfolders if f'_B0{color_enum.value}_' in x}))
-        for color_enum in Color
+        color: list(
+            sentinel_product_location.glob(
+                f"GRANULE/*/IMG_DATA/R{resolution}m/*_B{color.value}_*"
+            )
+        )[0]
+        for color in Color
     }
 
-    
-# ds = xr.open_rasterio('D:\Profils\eschalk\Downloads\S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958\S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE\GRANULE\L2A_T31TCJ_A038658_20221116T105603\IMG_DATA\R10m\T31TCJ_20221116T105321_TCI_10m.jp2')
-    
-    logging.debug(pformat(band_file_paths))
+    logging.info(pformat(band_file_paths))
+
+    bands: Sequence[xr.DataArray] = list(
+        rioxarray.open_rasterio(band_file_paths[color]).astype(float)
+        for color in [Color.RED, Color.GREEN, Color.BLUE]
+    )
+
+    xds: xr.DataArray = xr.concat(bands, "band")
+
+    # Normalization to a [0, 1] float, as Sentinel reflectances value are given in the [[0, 10000]] range
+    xds /= 10000.0
+
+    # xds_lonlat = xds.rio.reproject("EPSG:4326")
+
+    info(xds)
+    # info(xds_lonlat)
+
+    """
+    (Pdb) xds.rio.crs
+    CRS.from_epsg(32631)
+    (Pdb) xds_lonlat.rio.crs
+    CRS.from_epsg(4326)
+    """
+
+    show(xds)
+    # show(xds_lonlat)
+
+    return xds
 
 
+def read_polygons(input_path: Path) -> gpd.GeoDataFrame:
+    gdf = gpd.read_file(input_path)
+    info("===")
+    info(gdf)
+    gdf.plot()
 
-    # xds = rioxarray.open_rasterio(band_file_paths[Color.RED])
-    xds = merge_arrays([
-        rioxarray.open_rasterio(band_file_paths[Color.RED]),
-        rioxarray.open_rasterio(band_file_paths[Color.GREEN]),
-        rioxarray.open_rasterio(band_file_paths[Color.BLUE]),
-    ])
+    gdf = gdf.to_crs("32631")  # Not useful as we can pass the CRS to the rioxarray
 
-    logging.debug(pformat(xds))
+    gdf.plot()
 
-    ax = xds.plot.imshow()
-    ax.axes.set_aspect('equal')
-    plt.show()
-
-    return None  # TODO eschalk
+    return gdf
 
 
-def read_polygons(input: Path) -> gpd.GeoDataFrame:
+def show(xds):
+    ax = xds.plot.imshow(vmax=np.percentile(xds, 99.5))
+    ax.axes.set_aspect("equal")
 
-    return None  # TODO eschalk
+
+def info(xds):
+
+    logging.info(pformat(xds))  # TODO eschalk
 
 
 def produce_clips(
-    dataset: xr.Dataset,
+    data_array: xr.DataArray,
     training_classes: gpd.GeoDataFrame,
     output: Path,
 ) -> None:
+    # https://corteva.github.io/rioxarray/stable/examples/clip_geom.html#Clip-using-a-geometry
+    # https://corteva.github.io/rioxarray/stable/examples/clip_geom.html#Clip-using-a-GeoDataFrame
+
+    # https://rasterio.readthedocs.io/en/latest/topics/masking-by-shapefile.html
+    # https://www.earthdatascience.org/courses/use-data-open-source-python/intro-vector-data-python/vector-data-processing/clip-vector-data-in-python-geopandas-shapely/
+    # https://spatial-dev.guru/2022/09/15/clip-raster-by-polygon-geometry-in-python-using-rioxarray/
+    
+    xds = data_array
+    gdf = training_classes
+    clipped = xds.rio.clip(gdf.geometry, gdf.crs, drop=False, invert=True)
+    clipped.plot()
+    # TODO eschalk
+    plt.show()
 
     pass
 

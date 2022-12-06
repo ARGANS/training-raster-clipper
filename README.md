@@ -31,3 +31,22 @@ D:\PROFILS\ESCHALK\DOWNLOADS\S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_202211
 ## Opening Raster 
 
 See [Adding band description to rioxarray to_raster()](https://stackoverflow.com/questions/65616979/adding-band-description-to-rioxarray-to-raster)
+
+## Drafts
+
+
+```python
+    xds = merge_arrays(
+        [rioxarray.open_rasterio(band_file_paths[color]) for color in Color]
+        [f(x) for in [1,2,3]]
+        [f for in [1,2,3]]
+        map(     f, [], )
+    )
+    args = []
+    kwargs = {}
+    f(*args, **kwargs)
+    d1,d2
+    d = {**d1, **d2}
+    f = lambda (x,y) : x+y
+    f(*(1,2))
+```
