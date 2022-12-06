@@ -38,7 +38,7 @@ import rioxarray
 import xarray as xr
 from pprint import pformat
 import logging
-
+from rasterio.mask import mask
 import numpy as np
 
 from enum import Enum
@@ -178,6 +178,7 @@ def show(xds):
 def info(xds):
 
     logging.info(pformat(xds))  # TODO eschalk
+    logging.info('--------')
 
 
 def produce_clips(
@@ -192,9 +193,28 @@ def produce_clips(
     # https://www.earthdatascience.org/courses/use-data-open-source-python/intro-vector-data-python/vector-data-processing/clip-vector-data-in-python-geopandas-shapely/
     # https://spatial-dev.guru/2022/09/15/clip-raster-by-polygon-geometry-in-python-using-rioxarray/
     
+    # https://corteva.github.io/rioxarray/html/rioxarray.html#rioxarray.raster_array.RasterArray
+    # https://corteva.github.io/rioxarray/html/rioxarray.html#rioxarray.raster_array.RasterArray.clip
+
     xds = data_array
     gdf = training_classes
-    clipped = xds.rio.clip(gdf.geometry, gdf.crs, drop=False, invert=True)
+    
+    info(xds)
+    info(gdf)
+    # clipped, out_transform = mask(xds, gdf.geometry.values, invert=False)
+    # https://gis.stackexchange.com/questions/401347/masking-raster-with-a-multipolygon
+
+    # out_image, out_transform = rasterio.mask.mask(src, geo.geometry, filled = True)
+    # out_image.plot()
+    breakpoint()
+    cropped = xds.rio.clip(geometries=gdf.geometry.values[0], crs=32631)
+
+    # TODO eschalk flatten the mono-multipolygons to polygons before clipping as multipolygons are not supported
+    # cropped = xds.rio.clip(geometries=gdf.geometry.values[0], crs=4326)
+    clipped = cropped 
+
+    info(clipped)
+
     clipped.plot()
     # TODO eschalk
     plt.show()
