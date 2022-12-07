@@ -52,6 +52,10 @@ class FeatureClass(Enum):
 
 def main():
     logging.basicConfig(level=logging.INFO)
+    
+    config = {
+        'classify': False
+    }
 
     args = parse_arguments(build_argument_parser())
 
@@ -75,7 +79,8 @@ def main():
         info(polygons)
         info(classified_rgb_rows)
 
-    classify(rasters, classified_rgb_rows)
+    if config['classify']:
+        classify(rasters, classified_rgb_rows)
 
     persist_to_csv(classified_rgb_rows, csv_output_path)
     info(f"Written CSV output file to {csv_output_path}")
@@ -236,7 +241,7 @@ def persist_to_csv(
         data=classified_rgb_rows,
         columns=[*(color.value for color in Color), "feature_key"],
     )
-    df.feature_key
+    df.feature_key = df.feature_key.apply(int)
     df.to_csv(csv_output_path, index=False, sep=";")
 
 
