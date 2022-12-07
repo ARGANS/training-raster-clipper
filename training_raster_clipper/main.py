@@ -31,6 +31,7 @@ import xarray as xr
 from pprint import pformat
 import logging
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 
 from enum import Enum
 
@@ -74,8 +75,9 @@ def main():
         info(polygons)
         info(classified_rgb_rows)
 
-    persist_to_csv(classified_rgb_rows, csv_output_path)
+    classify(rasters, classified_rgb_rows)
 
+    persist_to_csv(classified_rgb_rows, csv_output_path)
     info(f"Written CSV output file to {csv_output_path}")
 
 
@@ -231,9 +233,19 @@ def persist_to_csv(
     csv_output_path: Path,
 ) -> None:
     df = pd.DataFrame(
-        classified_rgb_rows, columns=[*(color.value for color in Color), "feature_key"]
+        data=classified_rgb_rows,
+        columns=[*(color.value for color in Color), "feature_key"],
     )
+    df.feature_key
     df.to_csv(csv_output_path, index=False, sep=";")
+
+
+def classify(rasters, classified_rgb_rows):
+    model = RandomForestClassifier()
+    model.fit(classified_rgb_rows[:, :3], classified_rgb_rows[:, 3].astype(int))
+    classes = model.predict(rasters.values.reshape(3, -1).T).reshape(rasters.shape[1:])
+    plt.imshow(classes)
+    plt.show()
 
 
 def info(object):
