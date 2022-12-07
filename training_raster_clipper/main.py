@@ -49,9 +49,9 @@ config = {
 
 
 class Color(Enum):
-    RED = "04"
-    GREEN = "03"
-    BLUE = "02"
+    RED = "B04"
+    GREEN = "B03"
+    BLUE = "B02"
 
 
 def main():
@@ -121,7 +121,7 @@ def read_sentinel_data(
     band_file_paths = {
         color: list(
             sentinel_product_location.glob(
-                f"GRANULE/*/IMG_DATA/R{resolution}m/*_B{color.value}_*"
+                f"GRANULE/*/IMG_DATA/R{resolution}m/*_{color.value}_*"
             )
         )[0]
         for color in Color
@@ -130,11 +130,18 @@ def read_sentinel_data(
     logging.info(pformat(band_file_paths))
 
     bands: Sequence[xr.DataArray] = list(
-        rioxarray.open_rasterio(band_file_paths[color]).astype(float)
+        rioxarray.open_rasterio(band_file_paths[color])
+        .astype(float)
+        .assign_coords(coords={"band": [color.value]})
         for color in [Color.RED, Color.GREEN, Color.BLUE]
     )
+    info("bands")
+    info(bands)
 
     xds: xr.DataArray = xr.concat(bands, "band")
+    # .assign_coords(
+    #     coords={"band": np.array(range(3)) + 1}
+    # )
 
     # Normalization to a [0, 1] float, as Sentinel reflectances value are given in the [[0, 10000]] range
     xds /= 10000.0
@@ -142,6 +149,10 @@ def read_sentinel_data(
     # xds_lonlat = xds.rio.reproject("EPSG:4326")
 
     info(xds)
+    info("anchor")
+    info(xds.sel(band="B02"))  # selects the dimension
+    info(xds.sel(band=["B02"]))  # keeps the englobing structure
+    info(xds.sel(band=["B02", "B04"]))
     # info(xds_lonlat)
 
     """
@@ -152,7 +163,6 @@ def read_sentinel_data(
     """
 
     show(xds)
-    # show(xds_lonlat)
 
     return xds
 
@@ -178,7 +188,23 @@ def show(xds):
 def info(xds):
 
     logging.info(pformat(xds))  # TODO eschalk
-    logging.info('--------')
+    logging.info("--------")
+
+
+def rasterize_geojson(
+    data_array: xr.DataArray,
+    training_classes: gpd.GeoDataFrame,
+) -> xr.DataArray:
+    xds = data_array
+    gdf = training_classes
+
+    burnt_polygons = rasterio.features.rasterize(
+        (gdf, 4),
+        out_shape=xds.shape[1:],
+        fill=0,
+        transform=xds.spatial_ref.GeoTransform.split(),
+        dtype=np.uint8,
+    )
 
 
 def produce_clips(
@@ -192,13 +218,15 @@ def produce_clips(
     # https://rasterio.readthedocs.io/en/latest/topics/masking-by-shapefile.html
     # https://www.earthdatascience.org/courses/use-data-open-source-python/intro-vector-data-python/vector-data-processing/clip-vector-data-in-python-geopandas-shapely/
     # https://spatial-dev.guru/2022/09/15/clip-raster-by-polygon-geometry-in-python-using-rioxarray/
-    
+
     # https://corteva.github.io/rioxarray/html/rioxarray.html#rioxarray.raster_array.RasterArray
     # https://corteva.github.io/rioxarray/html/rioxarray.html#rioxarray.raster_array.RasterArray.clip
 
     xds = data_array
     gdf = training_classes
-    
+
+    info("xds.spatial_ref")
+    info(xds.spatial_ref)
     info(xds)
     info(gdf)
     # clipped, out_transform = mask(xds, gdf.geometry.values, invert=False)
@@ -206,20 +234,20 @@ def produce_clips(
 
     # out_image, out_transform = rasterio.mask.mask(src, geo.geometry, filled = True)
     # out_image.plot()
-    breakpoint()
-    cropped = xds.rio.clip(geometries=gdf.geometry.values[0], crs=32631)
+    # # TODO eschalk flatten the mono-multipolygons to polygons before clipping as multipolygons are not supported
+    # cropped = xds.rio.clip(geometries=gdf.geometry.values[0], crs=32631)
 
-    # TODO eschalk flatten the mono-multipolygons to polygons before clipping as multipolygons are not supported
-    # cropped = xds.rio.clip(geometries=gdf.geometry.values[0], crs=4326)
-    clipped = cropped 
+    # # cropped = xds.rio.clip(geometries=gdf.geometry.values[0], crs=4326)
+    # clipped = cropped
 
-    info(clipped)
+    # info(clipped)
 
-    clipped.plot()
+    # clipped.plot()
+
     # TODO eschalk
-    plt.show()
+    # plt.show()
+    burnt_polygons = rasterize_geojson(xds, gdf)
 
-    pass
 
 
 if __name__ == "__main__":
