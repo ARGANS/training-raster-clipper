@@ -13,39 +13,27 @@ Use RGB rasters (find band naming convention) in `S2A_MSIL2A_20221116T105321_N04
 
 
 """
-
+from affine import Affine
 import argparse
-import datetime
 from pathlib import Path
 from typing import (
-    Dict,
-    Iterable,
-    List,
-    NoReturn,
-    Set,
-    Tuple,
-    Union,
     Optional,
     Literal,
     Sequence,
 )
 
 import geopandas as gpd
-import matplotlib.pyplot as plt
-import pandas as pd
+import pandas as pd 
 import rasterio
 import rioxarray
 import xarray as xr
 from pprint import pformat
 import logging
-from rasterio.mask import mask
 import numpy as np
 
 from enum import Enum
 
-config = {
-    "plot": False,
-}
+import matplotlib.pyplot as plt
 
 
 class Color(Enum):
@@ -53,6 +41,10 @@ class Color(Enum):
     GREEN = "B03"
     BLUE = "B02"
 
+class FeatureClass(Enum):
+    WATER = 1
+    FOREST = 2 
+    FARM = 3
 
 def main():
     logging.basicConfig(level=logging.INFO)
@@ -95,20 +87,14 @@ def build_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-"""
-Example input path: `S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE`
-`
-S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.
-L2A_T31TCJ_A038658_20221116T105603
-"""
-
-
 def read_sentinel_data(
     sentinel_product_location: Path,
     *,
     resolution: Optional[Literal[60] | Literal[20] | Literal[10]] = 60,
 ) -> xr.DataArray:
     """Loads sentinel product
+
+    Example input path: `S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE`
 
     Args:
         sentinel_product_location (Path): Location of the .SAFE folder containing a Sentinel-2 product.
@@ -135,49 +121,17 @@ def read_sentinel_data(
         .assign_coords(coords={"band": [color.value]})
         for color in [Color.RED, Color.GREEN, Color.BLUE]
     )
-    info("bands")
-    info(bands)
 
     xds: xr.DataArray = xr.concat(bands, "band")
-    # .assign_coords(
-    #     coords={"band": np.array(range(3)) + 1}
-    # )
 
     # Normalization to a [0, 1] float, as Sentinel reflectances value are given in the [[0, 10000]] range
     xds /= 10000.0
-
-    # xds_lonlat = xds.rio.reproject("EPSG:4326")
-
-    info(xds)
-    info("anchor")
-    info(xds.sel(band="B02"))  # selects the dimension
-    info(xds.sel(band=["B02"]))  # keeps the englobing structure
-    info(xds.sel(band=["B02", "B04"]))
-    # info(xds_lonlat)
-
-    """
-    (Pdb) xds.rio.crs
-    CRS.from_epsg(32631)
-    (Pdb) xds_lonlat.rio.crs
-    CRS.from_epsg(4326)
-    """
-
-    show(xds)
 
     return xds
 
 
 def read_polygons(input_path: Path) -> gpd.GeoDataFrame:
-    gdf = gpd.read_file(input_path)
-    info("===")
-    info(gdf)
-    gdf.plot()
-
-    gdf = gdf.to_crs("32631")  # Not useful as we can pass the CRS to the rioxarray
-
-    gdf.plot()
-
-    return gdf
+    return gpd.read_file(input_path).to_crs("32631")
 
 
 def show(xds):
@@ -195,16 +149,49 @@ def rasterize_geojson(
     data_array: xr.DataArray,
     training_classes: gpd.GeoDataFrame,
 ) -> xr.DataArray:
+    """Burns a set of vectorial polygons to a raster.
+
+    See https://gis.stackexchange.com/questions/316626/rasterio-features-rasterize
+
+    Args:
+        data_array (xr.DataArray): The Sentinel raster, from which data is taken, such as the transform or the shape.
+        training_classes (gpd.GeoDataFrame): The input set of polygons to burn
+
+    Returns:
+        xr.DataArray: A mask raster generated from the polygons, representing the same geographical region as the source dataarray param
+    """
+
     xds = data_array
     gdf = training_classes
 
-    burnt_polygons = rasterio.features.rasterize(
-        (gdf, 4),
-        out_shape=xds.shape[1:],
+    raster_transform = list(float(k) for k in xds.spatial_ref.GeoTransform.split())
+    raster_transform = Affine.from_gdal(*raster_transform)
+    out_shape = xds.shape[1:]
+    shapes = [(row.geometry, row.class_key) for _, row in gdf.iterrows()]
+
+    info(out_shape)
+    info(gdf.geometry[0])
+    info(shapes)
+    
+    # n dimensional array
+    burnt_polygons: np.ndarray = rasterio.features.rasterize(
+        shapes,
+        out_shape=out_shape,
         fill=0,
-        transform=xds.spatial_ref.GeoTransform.split(),
+        transform=raster_transform,
         dtype=np.uint8,
     )
+
+    info("burnt_polygons")
+    info(burnt_polygons)
+    
+    # plt.imshow(burnt_polygons)
+    # plt.show()
+    
+    return burnt_polygons
+    
+
+    
 
 
 def produce_clips(
@@ -212,42 +199,53 @@ def produce_clips(
     training_classes: gpd.GeoDataFrame,
     output: Path,
 ) -> None:
-    # https://corteva.github.io/rioxarray/stable/examples/clip_geom.html#Clip-using-a-geometry
-    # https://corteva.github.io/rioxarray/stable/examples/clip_geom.html#Clip-using-a-GeoDataFrame
-
-    # https://rasterio.readthedocs.io/en/latest/topics/masking-by-shapefile.html
-    # https://www.earthdatascience.org/courses/use-data-open-source-python/intro-vector-data-python/vector-data-processing/clip-vector-data-in-python-geopandas-shapely/
-    # https://spatial-dev.guru/2022/09/15/clip-raster-by-polygon-geometry-in-python-using-rioxarray/
-
-    # https://corteva.github.io/rioxarray/html/rioxarray.html#rioxarray.raster_array.RasterArray
-    # https://corteva.github.io/rioxarray/html/rioxarray.html#rioxarray.raster_array.RasterArray.clip
-
     xds = data_array
     gdf = training_classes
 
-    info("xds.spatial_ref")
-    info(xds.spatial_ref)
-    info(xds)
-    info(gdf)
-    # clipped, out_transform = mask(xds, gdf.geometry.values, invert=False)
-    # https://gis.stackexchange.com/questions/401347/masking-raster-with-a-multipolygon
-
-    # out_image, out_transform = rasterio.mask.mask(src, geo.geometry, filled = True)
-    # out_image.plot()
-    # # TODO eschalk flatten the mono-multipolygons to polygons before clipping as multipolygons are not supported
-    # cropped = xds.rio.clip(geometries=gdf.geometry.values[0], crs=32631)
-
-    # # cropped = xds.rio.clip(geometries=gdf.geometry.values[0], crs=4326)
-    # clipped = cropped
-
-    # info(clipped)
-
-    # clipped.plot()
-
-    # TODO eschalk
-    # plt.show()
     burnt_polygons = rasterize_geojson(xds, gdf)
-
+    
+    rgb_for_classes = {
+        c: xds.values[:, burnt_polygons == c.value].T
+        for c in FeatureClass
+    }
+    
+    info(rgb_for_classes)
+    
+    l = [np.c_[value, np.ones(len(value)) * feature_class.value] for feature_class, value in rgb_for_classes.items()]
+    l = np.concatenate(l)
+    print(l)
+    
+        
+    # print(
+    #         xr.concat([xds, xr.DataArray(burnt_polygons, band)], dim='band').values[:, burnt_polygons != 0]
+    # )
+    
+    breakpoint()
+    
+    non_zero_indices = np.nonzero(burnt_polygons)
+    info(non_zero_indices)
+    non_zero_values = burnt_polygons[non_zero_indices]
+    info(f"Output array of non-zero number: {non_zero_values}")
+    info(f"{np.shape(burnt_polygons)}")
+    
+    # info(f"Output array of non-zero number: {raster_values}")
+    info(xds[0][non_zero_indices])
+    info(xds[1][non_zero_indices])
+    info(xds[2][non_zero_indices])
+    info(f"{np.shape(burnt_polygons)}")
+    # xds[:, non_zero_values]
+    
+    df = {
+        'R': xds.sel(band=Color.RED.value)[non_zero_indices],
+        'G': xds.sel(band=Color.GREEN.value)[non_zero_indices],
+        'B': xds.sel(band=Color.BLUE.value)[non_zero_indices],
+        'class_key': non_zero_values,
+    }
+    
+    info("dataframe")
+    info(df)
+    
+    return df
 
 
 if __name__ == "__main__":
