@@ -1,5 +1,12 @@
 # training-raster-clipper
 
+## Usage example
+
+From project directory `training-raster-clipper`:
+
+```bash
+poetry run python ./training_raster_clipper/main.py -r D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE -p resources/polygons.geojson -o generated/classified_points.csv
+```
 ## Sentinel-2 Product Structure
 
 See official documentation: 
