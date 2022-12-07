@@ -20,10 +20,11 @@ from typing import (
     Optional,
     Literal,
     Sequence,
+    Sequence,
 )
 
 import geopandas as gpd
-import pandas as pd 
+import pandas as pd
 import rasterio
 import rioxarray
 import xarray as xr
@@ -41,40 +42,41 @@ class Color(Enum):
     GREEN = "B03"
     BLUE = "B02"
 
+
 class FeatureClass(Enum):
     WATER = 1
-    FOREST = 2 
+    FOREST = 2
     FARM = 3
+
 
 def main():
     logging.basicConfig(level=logging.INFO)
 
-    args = parse_arguments()
-    logging.info(args)
+    args = parse_arguments(build_argument_parser())
 
     raster_input_path = Path(args.raster_input_path)
     polygons_input_path = Path(args.polygons_input_path)
     csv_output_path = Path(args.csv_output_path)
+    verbose = args.verbose
 
-    rasters = read_sentinel_data(raster_input_path)
-    polygons = read_polygons(polygons_input_path)
+    if verbose:
+        info(args)
+        info(raster_input_path)
+        info(polygons_input_path)
+        info(csv_output_path)
 
-    produce_clips(rasters, polygons, csv_output_path)
+    rasters = load_sentinel_data(raster_input_path)
+    polygons = load_feature_polygons(polygons_input_path)
+    classified_rgb_rows = produce_clips(rasters, rasterize_geojson(rasters, polygons))
 
-    logging.info(raster_input_path)
-    logging.info(polygons_input_path)
-    logging.info(csv_output_path)
+    if verbose:
+        info(rasters)
+        info(polygons)
+        info(classified_rgb_rows)
 
+    persist_to_csv(classified_rgb_rows, csv_output_path)
 
-def parse_arguments():
-    argparser = build_argument_parser()
-    args = argparser.parse_args()
-
-    assert args.raster_input_path, "Missing argument: raster_input_path"
-    assert args.polygons_input_path, "Missing argument: polygons_input_path"
-    assert args.csv_output_path, "Missing argument: csv_output_path"
-
-    return args
+    info(f"Written CSV output file to {csv_output_path}")
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -84,10 +86,29 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "-p", "--polygons_input_path", type=str, help="Classified polygons"
     )
     parser.add_argument("-o", "--csv_output_path", type=str, help="Output directory")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        type=bool,
+        nargs="?",
+        const=True,
+        default=False,
+        help="Verbose",
+    )
     return parser
 
 
-def read_sentinel_data(
+def parse_arguments(argument_parser: argparse.ArgumentParser):
+    args = argument_parser.parse_args()
+
+    assert args.raster_input_path, "Missing argument: raster_input_path"
+    assert args.polygons_input_path, "Missing argument: polygons_input_path"
+    assert args.csv_output_path, "Missing argument: csv_output_path"
+
+    return args
+
+
+def load_sentinel_data(
     sentinel_product_location: Path,
     *,
     resolution: Optional[Literal[60] | Literal[20] | Literal[10]] = 60,
@@ -113,8 +134,6 @@ def read_sentinel_data(
         for color in Color
     }
 
-    logging.info(pformat(band_file_paths))
-
     bands: Sequence[xr.DataArray] = list(
         rioxarray.open_rasterio(band_file_paths[color])
         .astype(float)
@@ -125,37 +144,52 @@ def read_sentinel_data(
     xds: xr.DataArray = xr.concat(bands, "band")
 
     # Normalization to a [0, 1] float, as Sentinel reflectances value are given in the [[0, 10000]] range
-    xds /= 10000.0
-
-    return xds
+    return xds / 10000.0
 
 
-def read_polygons(input_path: Path) -> gpd.GeoDataFrame:
+def load_feature_polygons(input_path: Path) -> gpd.GeoDataFrame:
     return gpd.read_file(input_path).to_crs("32631")
 
 
-def show(xds):
-    ax = xds.plot.imshow(vmax=np.percentile(xds, 99.5))
-    ax.axes.set_aspect("equal")
+def produce_clips(
+    data_array: xr.DataArray, burnt_polygons: np.ndarray
+) -> Sequence[Sequence[float]]:
+    """Extract RGB values covered by classified polygons
 
+    Args:
+        data_array (xr.DataArray): RGB raster
+        burnt_polygons (np.ndarray): Rasterized classified multipolygons
 
-def info(xds):
+    Returns:
+        _type_: A list of the RGB values contained in the data_array and their corresponding classes
+    """
 
-    logging.info(pformat(xds))  # TODO eschalk
-    logging.info("--------")
+    xds = data_array
+
+    feature_class_to_rgb_values = {
+        c: xds.values[:, burnt_polygons == c.value].T for c in FeatureClass
+    }
+
+    # Refining: get a list of (R, G, B, feature class key) values
+    return np.concatenate(
+        [
+            np.c_[values, np.ones(len(values)) * feature_class.value]
+            for feature_class, values in feature_class_to_rgb_values.items()
+        ]
+    )
 
 
 def rasterize_geojson(
     data_array: xr.DataArray,
     training_classes: gpd.GeoDataFrame,
-) -> xr.DataArray:
+) -> np.ndarray:
     """Burns a set of vectorial polygons to a raster.
 
     See https://gis.stackexchange.com/questions/316626/rasterio-features-rasterize
 
     Args:
         data_array (xr.DataArray): The Sentinel raster, from which data is taken, such as the transform or the shape.
-        training_classes (gpd.GeoDataFrame): The input set of polygons to burn
+        training_classes (gpd.GeoDataFrame): The input set of classified multipolygons to burn
 
     Returns:
         xr.DataArray: A mask raster generated from the polygons, representing the same geographical region as the source dataarray param
@@ -166,14 +200,14 @@ def rasterize_geojson(
 
     raster_transform = list(float(k) for k in xds.spatial_ref.GeoTransform.split())
     raster_transform = Affine.from_gdal(*raster_transform)
+
+    # Remove the first value (band) and keep the dimensional ones
     out_shape = xds.shape[1:]
+
+    # Extract couples of geometry and class required to rasterize
     shapes = [(row.geometry, row.class_key) for _, row in gdf.iterrows()]
 
-    info(out_shape)
-    info(gdf.geometry[0])
-    info(shapes)
-    
-    # n dimensional array
+    # ndarray means n-dimensional array
     burnt_polygons: np.ndarray = rasterio.features.rasterize(
         shapes,
         out_shape=out_shape,
@@ -182,70 +216,33 @@ def rasterize_geojson(
         dtype=np.uint8,
     )
 
-    info("burnt_polygons")
-    info(burnt_polygons)
-    
     # plt.imshow(burnt_polygons)
     # plt.show()
-    
+
     return burnt_polygons
-    
-
-    
 
 
-def produce_clips(
-    data_array: xr.DataArray,
-    training_classes: gpd.GeoDataFrame,
-    output: Path,
+def persist_to_csv(
+    classified_rgb_rows: Sequence[
+        Sequence[
+            float,
+        ]
+    ],
+    csv_output_path: Path,
 ) -> None:
-    xds = data_array
-    gdf = training_classes
+    df = pd.DataFrame(
+        classified_rgb_rows, columns=[*(color.value for color in Color), "feature_key"]
+    )
+    df.to_csv(csv_output_path, index=False, sep=";")
 
-    burnt_polygons = rasterize_geojson(xds, gdf)
-    
-    rgb_for_classes = {
-        c: xds.values[:, burnt_polygons == c.value].T
-        for c in FeatureClass
-    }
-    
-    info(rgb_for_classes)
-    
-    l = [np.c_[value, np.ones(len(value)) * feature_class.value] for feature_class, value in rgb_for_classes.items()]
-    l = np.concatenate(l)
-    print(l)
-    
-        
-    # print(
-    #         xr.concat([xds, xr.DataArray(burnt_polygons, band)], dim='band').values[:, burnt_polygons != 0]
-    # )
-    
-    breakpoint()
-    
-    non_zero_indices = np.nonzero(burnt_polygons)
-    info(non_zero_indices)
-    non_zero_values = burnt_polygons[non_zero_indices]
-    info(f"Output array of non-zero number: {non_zero_values}")
-    info(f"{np.shape(burnt_polygons)}")
-    
-    # info(f"Output array of non-zero number: {raster_values}")
-    info(xds[0][non_zero_indices])
-    info(xds[1][non_zero_indices])
-    info(xds[2][non_zero_indices])
-    info(f"{np.shape(burnt_polygons)}")
-    # xds[:, non_zero_values]
-    
-    df = {
-        'R': xds.sel(band=Color.RED.value)[non_zero_indices],
-        'G': xds.sel(band=Color.GREEN.value)[non_zero_indices],
-        'B': xds.sel(band=Color.BLUE.value)[non_zero_indices],
-        'class_key': non_zero_values,
-    }
-    
-    info("dataframe")
-    info(df)
-    
-    return df
+
+def info(object):
+    logging.info(pformat(object))
+
+
+def show(xds):
+    ax = xds.plot.imshow(vmax=np.percentile(xds, 99.5))
+    ax.axes.set_aspect("equal")
 
 
 if __name__ == "__main__":
