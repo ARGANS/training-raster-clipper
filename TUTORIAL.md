@@ -68,6 +68,8 @@ In the next part we will visualize it into QGIS.
 
 ### Draw geometric shapes and classify them
 
+For each class (Water, Farmland and Forest), a unique MultiPolygon will be generated. A MultiPolygons is, without surprise, a collection of Polygons. Note that it is unordered. For more information, please refer to the [MultiPolygon section of the GeoJSON specification](https://www.rfc-editor.org/rfc/rfc7946#section-3.1.7)
+
 [TODO eschalk]
 
 #### Export the polygons to the GeoJSON format
@@ -135,6 +137,8 @@ INFO:root:     id   class                                           geometry
 1  None  FOREST  MULTIPOLYGON (((355918.751 4834466.232, 357404...
 2  None    FARM  MULTIPOLYGON (((365718.363 4843753.544, 365876...
 ```
+
+:eyes: We can see again our 3 MultiPolygons created from QGIS, each of them corresponding to a specific class
 
 ### Load a Sentinel-2 raster (`rioxarray`)
 
@@ -234,7 +238,27 @@ def rasterize_geojson(
 
 This step uses data from the two previous steps: the metadata from the multi-band DataArray obtained with Sentinel-2 data, and the polygons loaded from the GeoJSON file into a GeoDataFrame.
 
-The goal is to convert
+Please note that the mapping should only contain strictly positive integers, as `0` cells will be treated as "empty".
+
+The goal is to obtain a raster mask that will be later used to extract the reflectance data of pixels overlapping the classified polygons. This data can then be fed to a machine learning model to classify the rest of the pixels of the original Sentinel-2 data. The reflectance will be the "samples", and the classes the "features". Trained with a few samples, we want the model to be able to assign a "feature" to every pixel of the original Sentinel-2 image.
+
+#### Overview
+
+![picture 8](images/55971ca7b2985e909b297634bd10585847a31e61d750120bd8db39c171188894.png)
+
+#### Rasterize the polygons
+
+`rasterio` provides a method to realize the desired output raster of polygons: [rasterio.features.rasterize](https://rasterio.readthedocs.io/en/latest/api/rasterio.features.html#rasterio.features.rasterize). The documentation tells the required parameters. You will need:
+
+- From the DataArray:
+  - the transform available under the `spatial_ref` dimension
+  - the shape, available directly under the `shape` number, without "band" (only "x" and "y")
+- From the GeoDataFrame:
+  - the `geometry` column,
+  - the `class` column,
+  - and the `index` column (can be used to generate the integer mapping)
+
+:arrow_forward: Generate the rasterized polygons according to their class. Return a tuple with the rasterized polygons + the generated integer mapping.
 
 #### Expected result
 
@@ -249,8 +273,6 @@ INFO:root:array([[0, 0, 0, ..., 0, 0, 0],
        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8)
 INFO:root:{'FARM': 3, 'FOREST': 2, 'WATER': 1}
 ```
-
-[TODO eschalk]
 
 ### Intersect the Sentinel-2 raster with polygons
 
@@ -286,11 +308,30 @@ def persist_to_csv(
 ) -> None:
 ```
 
+:arrow_forward: With the help of a pandas DataFrame, output the previously obtained numpy array of colors and class to a CSV File. Columns must be all the Colors, followed by the integer representing the class of the pixel.
+
 #### Expected result
 
 ```log
 INFO:root:Executing step: TutorialStep.PERSIST_TO_CSV
 INFO:root:Written CSV output generated\classified_points.csv
+```
+
+Excerpt from an example of a generated file:
+
+```csv
+B04;B03;B02;B8A;feature_key
+0.107;0.1152;0.1041;0.1073;1
+0.1071;0.1148;0.1036;0.1173;1
+0.1097;0.1175;0.1047;0.13;1
+...
+0.1233;0.1262;0.1043;0.3333;2
+0.1332;0.1342;0.1101;0.3446;2
+0.1283;0.1336;0.1085;0.3442;2
+...
+0.1963;0.1785;0.1435;0.3284;3
+0.2053;0.1794;0.1456;0.3005;3
+0.2078;0.1793;0.1443;0.2912;3
 ```
 
 ### Train a machine learning model
