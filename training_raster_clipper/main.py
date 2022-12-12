@@ -136,9 +136,9 @@ def main():
 def interrupt_if_step_reached(
     tutorial_step: TutorialStep, max_tutorial_step: TutorialStep
 ):
-    info(f"Executing step: {tutorial_step}")
     if tutorial_step.value < max_tutorial_step.value:
         exit(f"Exit after step {tutorial_step}")
+    info(f"Executing step: {max_tutorial_step}")
 
 
 def build_argument_parser() -> argparse.ArgumentParser:

@@ -16,9 +16,18 @@ PolygonMask = npt.NDArray[np.uint8]
 # Allowed values for the Sentinel-2 Resolution
 Resolution = Optional[Literal[60] | Literal[20] | Literal[10]]
 
-# Enum representing the bands
-class Color(Enum):
+
+class ColorVisible(Enum):
+    RED = "B04"
+    GREEN = "B03"
+    BLUE = "B02"
+
+
+class ColorVisibleAndNir(Enum):
     RED = "B04"
     GREEN = "B03"
     BLUE = "B02"
     NIR = "B8A"
+
+
+Color = ColorVisibleAndNir

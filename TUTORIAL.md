@@ -91,9 +91,9 @@ Below is an example of configuration:
 ```bash
 TUTORIAL_STEP=NONE
 POLYGONS_INPUT_PATH=
-POLYGONS_INPUT_PATH=resources/solution/polygons.geojson
+# POLYGONS_INPUT_PATH=resources/solution/polygons.geojson
 RASTER_INPUT_PATH=
-RASTER_INPUT_PATH=D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE
+# RASTER_INPUT_PATH=D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE
 CSV_OUTPUT_PATH=generated/classified_points.csv
 RASTER_OUTPUT_PATH=generated/sklearn_raster.tiff
 
@@ -120,9 +120,17 @@ The `geopanda` library adds geographical capabilities over `pandas`, such as a `
 
 Since the GeoJSON is in a `4326` EPSG format, we convert it to the one used by the Sentinel-2 raster: `32631`. See [to_crs](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.to_crs.html)
 
-### Load a Sentinel-2 raster (`rioxarray`)
+#### Expected result
 
-In this tutorial, we will use a resolution of 60 meters, the minimal available one, to use less memory and iterate faster.
+```log
+INFO:root:Executing step: TutorialStep.LOAD_FEATURE_POLYGONS
+INFO:root:     id   class                                           geometry
+0  None   WATER  MULTIPOLYGON (((366356.635 4843608.195, 366742...
+1  None  FOREST  MULTIPOLYGON (((355918.751 4834466.232, 357404...
+2  None    FARM  MULTIPOLYGON (((365718.363 4843753.544, 365876...
+```
+
+### Load a Sentinel-2 raster (`rioxarray`)
 
 ```python
 def load_sentinel_data(
@@ -131,9 +139,85 @@ def load_sentinel_data(
 ) -> xr.DataArray:
 ```
 
-[TODO eschalk]
+In this tutorial, we will use a resolution of 60 meters, the minimal available one, to use less memory and iterate faster.
+
+#### Locate the interesting bands
+
+You can see in the `custom_types/custom_types.py` file that the following enum is defined:
+
+```python
+class ColorVisibleAndNir(Enum):
+    RED = "B04"
+    GREEN = "B03"
+    BLUE = "B02"
+    NIR = "B8A"
+
+
+Color = ColorVisibleAndNir
+```
+
+:information_source: The values of this enum correspond to the band names as described in [Spatial Resolution](https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-2-msi/resolutions/spatial). The noun "Color" is here used more broadly, as it also includes the NIR (Near Infrared). A more correct name would be "Band".
+
+The glob pattern to locate the files from the `.SAFE` folder containing the Sentinel-2 product is the following: `GRANULE/*/IMG_DATA/R{resolution}m/*_{color.value}_*`
+
+:arrow_forward: Generate a color-indexed `Dict` of paths pointing to a raster for all colors in the `Color` enum
+
+#### Use `rioxarray` to load the bands
+
+:arrow_forward: Generate a list of [`xarray.DataArray`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html) Use [`rioxarray.open_rasterio`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-open-rasterio).
+
+Each DataArray should be cast to float, as the Sentinel values are integer-encoded, [ranging from 0 to 10000](https://docs.sentinel-hub.com/api/latest/data/sentinel-2-l2a/#harmonize-values). They actually represent a reflectance value from 0 to 1, so to normalize, the values in the DataArray must be divided by 10000.
+
+Each DataArray should be enhanced with a new "band" coord, with the value being the one from the `Color` enum. See [`xarray.DataArray.assign_coords`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.assign_coords.html)
+
+:arrow_forward: Concatenate the bands on a "band" dimension, using [xarray.concat](https://docs.xarray.dev/en/stable/generated/xarray.concat.html) for all colors in the `Color` enum. The final DataArray should have 3 coordinates: band, x, y.
+
+#### Expected result
+
+```log
+INFO:root:Executing step: TutorialStep.LOAD_SENTINEL_DATA
+INFO:root:<xarray.DataArray (band: 4, y: 1830, x: 1830)>
+array([[[0.172 , 0.1677, 0.1614, ..., 0.1329, 0.1313, 0.1291],
+        [0.171 , 0.1666, 0.1674, ..., 0.1315, 0.1296, 0.1329],
+        [0.1797, 0.1531, 0.1551, ..., 0.1305, 0.1296, 0.1344],
+        ...,
+        [0.1353, 0.1321, 0.1216, ..., 0.1713, 0.1412, 0.1603],
+        [0.116 , 0.1325, 0.1314, ..., 0.2727, 0.263 , 0.208 ],
+        [0.1248, 0.1357, 0.1402, ..., 0.2427, 0.233 , 0.248 ]],
+
+       [[0.1611, 0.1578, 0.15  , ..., 0.1461, 0.1437, 0.1419],
+        [0.1606, 0.1509, 0.148 , ..., 0.144 , 0.1402, 0.144 ],
+        [0.1603, 0.1463, 0.1462, ..., 0.1426, 0.142 , 0.1465],
+        ...,
+        [0.139 , 0.143 , 0.1325, ..., 0.1606, 0.1412, 0.1514],
+        [0.1243, 0.1442, 0.1474, ..., 0.2279, 0.2241, 0.1886],
+        [0.1347, 0.1467, 0.1508, ..., 0.2062, 0.1989, 0.2136]],
+
+       [[0.1347, 0.1323, 0.1276, ..., 0.1134, 0.1132, 0.1132],
+        [0.1341, 0.1304, 0.1288, ..., 0.1135, 0.1129, 0.1146],
+        [0.1349, 0.1231, 0.1257, ..., 0.1129, 0.1131, 0.1165],
+        ...,
+        [0.1115, 0.1115, 0.1037, ..., 0.1236, 0.1136, 0.1218],
+        [0.1035, 0.1131, 0.1105, ..., 0.16  , 0.1596, 0.145 ],
+        [0.1076, 0.1156, 0.1158, ..., 0.1488, 0.1453, 0.1577]],
+
+       [[0.2769, 0.277 , 0.2587, ..., 0.3713, 0.3631, 0.3439],
+        [0.276 , 0.2345, 0.2191, ..., 0.3511, 0.3403, 0.3547],
+        [0.2519, 0.2613, 0.2484, ..., 0.3485, 0.3559, 0.3687],
+        ...,
+        [0.3279, 0.3605, 0.3403, ..., 0.3368, 0.3274, 0.3498],
+        [0.2775, 0.4015, 0.4392, ..., 0.3312, 0.3428, 0.3548],
+        [0.4155, 0.4093, 0.4304, ..., 0.2904, 0.2792, 0.2992]]])
+Coordinates:
+  * band         (band) <U3 'B04' 'B03' 'B02' 'B8A'
+  * x            (x) float64 3e+05 3.001e+05 3.002e+05 ... 4.097e+05 4.098e+05
+  * y            (y) float64 4.9e+06 4.9e+06 4.9e+06 ... 4.79e+06 4.79e+06
+    spatial_ref  int32 0
+```
 
 ### Rasterize the polygons
+
+[TODO eschalk]
 
 ```python
 def rasterize_geojson(
@@ -142,9 +226,29 @@ def rasterize_geojson(
 ) -> Tuple[PolygonMask, Mapping]:
 ```
 
+This step uses data from the two previous steps: the metadata from the multi-band DataArray obtained with Sentinel-2 data, and the polygons loaded from the GeoJSON file into a GeoDataFrame.
+
+The goal is to convert
+
+#### Expected result
+
+```log
+INFO:root:Executing step: TutorialStep.RASTERIZE_GEOJSON
+INFO:root:array([[0, 0, 0, ..., 0, 0, 0],
+       [0, 0, 0, ..., 0, 0, 0],
+       [0, 0, 0, ..., 0, 0, 0],
+       ...,
+       [0, 0, 0, ..., 0, 0, 0],
+       [0, 0, 0, ..., 0, 0, 0],
+       [0, 0, 0, ..., 0, 0, 0]], dtype=uint8)
+INFO:root:{'FARM': 3, 'FOREST': 2, 'WATER': 1}
+```
+
 [TODO eschalk]
 
 ### Intersect the Sentinel-2 raster with polygons
+
+[TODO eschalk]
 
 ```python
 def produce_clips(
@@ -152,9 +256,22 @@ def produce_clips(
 ) -> ClassifiedSamples:
 ```
 
-[TODO eschalk]
+#### Expected result
+
+```log
+INFO:root:Executing step: TutorialStep.PRODUCE_CLIPS
+INFO:root:array([[0.107 , 0.1152, 0.1041, 0.1073, 1.    ],
+       [0.1071, 0.1148, 0.1036, 0.1173, 1.    ],
+       [0.1097, 0.1175, 0.1047, 0.13  , 1.    ],
+       ...,
+       [0.1963, 0.1785, 0.1435, 0.3284, 3.    ],
+       [0.2053, 0.1794, 0.1456, 0.3005, 3.    ],
+       [0.2078, 0.1793, 0.1443, 0.2912, 3.    ]])
+```
 
 ### Persist the intersection to a CSV
+
+[TODO eschalk]
 
 ```python
 def persist_to_csv(
@@ -163,9 +280,18 @@ def persist_to_csv(
 ) -> None:
 ```
 
+#### Expected result
+
 [TODO eschalk]
 
+```log
+INFO:root:Executing step: TutorialStep.PERSIST_TO_CSV
+INFO:root:Written CSV output generated\classified_points.csv
+```
+
 ### Train a machine learning model
+
+[TODO eschalk]
 
 ```python
 def classify_sentinel_data(
@@ -174,15 +300,28 @@ def classify_sentinel_data(
 ) -> np.ndarray:
 ```
 
-[TODO eschalk]
+#### Expected result
 
-### Add the NIR band to get better results
+```log
+INFO:root:Executing step: TutorialStep.CLASSIFY_SENTINEL_DATA
+INFO:root:array([[3, 3, 3, ..., 2, 2, 2],
+       [3, 3, 3, ..., 2, 2, 2],
+       [3, 2, 2, ..., 2, 2, 2],
+       ...,
+       [2, 2, 2, ..., 3, 2, 2],
+       [2, 2, 2, ..., 3, 3, 3],
+       [2, 2, 3, ..., 3, 3, 3]])
+```
 
-The goal of this part is to show that using the NIR (Near-Infrared) band can help identify water and provide better classification results. The subsidiary goal is to show that with a flexible enough code, loading this NIR band should be as simple as adding a new value in the `Color` enum.
+~~### Add the NIR band to get better results~~
 
-[TODO eschalk]
+~~The goal of this part is to show that using the NIR (Near-Infrared) band can help identify water and provide better classification results. The subsidiary goal is to show that with a flexible enough code, loading this NIR band should be as simple as adding a new value in the `Color` enum.~~
+
+_Note: Removed because the NIR band is included from the start_
 
 ### Export the classification raster result
+
+[TODO eschalk]
 
 ```python
 def persist_classification_to_raster(
@@ -190,7 +329,15 @@ def persist_classification_to_raster(
 ) -> None:
 ```
 
+#### Expected result
+
 [TODO eschalk]
+
+```log
+INFO:root:Executing step: TutorialStep.PERSIST_CLASSIFICATION_TO_RASTER
+INFO:root:Written Classified Raster to generated\classified_points.csv
+INFO:root:Congratulations, you reached the end of the tutorial!
+```
 
 ## QGIS (arrival)
 
