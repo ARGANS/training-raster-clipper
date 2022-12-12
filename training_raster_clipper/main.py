@@ -7,7 +7,6 @@ It takes two inputs:
 It produces a CSV of R,G,B,Class columns. Only the data present in the polygons remains in the CSV, the rest is cut off.
 
 
-TODO
 Use the 60m lower resolution for faster iterations
 Use RGB rasters (find band naming convention) in `S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958S.SAFE` 
 
@@ -25,6 +24,7 @@ from typing import (
 )
 
 import geopandas as gpd
+from geopandas.geodataframe import GeoDataFrame
 import pandas as pd
 import rasterio
 import rioxarray
@@ -32,7 +32,11 @@ import xarray as xr
 from pprint import pformat
 import logging
 import numpy as np
+import numpy.typing as npt
+
+
 from sklearn.ensemble import RandomForestClassifier
+
 
 from enum import Enum
 
@@ -40,6 +44,7 @@ import matplotlib.pyplot as plt
 
 Mapping = Dict[str, int]  # Maps a feature class name to an integer.
 ClassifiedSamples = Sequence[Sequence[float]]  # Rows of (*bands, class)
+PolygonMask = npt.NDArray[np.uint8]
 
 
 class Color(Enum):
@@ -81,9 +86,6 @@ def main():
         persist_classification_to_raster(
             raster_output_path, rasters, classification_result
         )
-
-        # TODO clone original raster and use classifications as bands
-        # TODO save raster
 
     persist_to_csv(classified_rgb_rows, csv_output_path)
     info(f"Written CSV output file to {csv_output_path}")
@@ -177,18 +179,18 @@ def load_sentinel_data(
     return xds / 10000.0
 
 
-def load_feature_polygons(input_path: Path) -> gpd.GeoDataFrame:
+def load_feature_polygons(input_path: Path) -> GeoDataFrame:
     return gpd.read_file(input_path).to_crs("32631")
 
 
 def produce_clips(
-    data_array: xr.DataArray, burnt_polygons: np.ndarray, mapping: Mapping
+    data_array: xr.DataArray, burnt_polygons: PolygonMask, mapping: Mapping
 ) -> ClassifiedSamples:
     """Extract RGB values covered by classified polygons
 
     Args:
         data_array (xr.DataArray): RGB raster
-        burnt_polygons (np.ndarray): Rasterized classified multipolygons
+        burnt_polygons (PolygonMask): Rasterized classified multipolygons
 
     Returns:
         _type_: A list of the RGB values contained in the data_array and their corresponding classes
@@ -211,15 +213,15 @@ def produce_clips(
 
 def rasterize_geojson(
     data_array: xr.DataArray,
-    training_classes: gpd.GeoDataFrame,
-) -> Tuple[np.ndarray, Mapping]:
+    training_classes: GeoDataFrame,
+) -> Tuple[PolygonMask, Mapping]:
     """Burns a set of vectorial polygons to a raster.
 
     See https://gis.stackexchange.com/questions/316626/rasterio-features-rasterize
 
     Args:
         data_array (xr.DataArray): The Sentinel raster, from which data is taken, such as the transform or the shape.
-        training_classes (gpd.GeoDataFrame): The input set of classified multipolygons to burn
+        training_classes (GeoDataFrame): The input set of classified multipolygons to burn
 
     Returns:
         xr.DataArray: A mask raster generated from the polygons, representing the same geographical region as the source dataarray param
@@ -242,7 +244,7 @@ def rasterize_geojson(
     # print(mapping)
 
     # ndarray means n-dimensional array
-    burnt_polygons: np.ndarray = rasterio.features.rasterize(
+    burnt_polygons: PolygonMask = rasterio.features.rasterize(
         shapes,
         out_shape=out_shape,
         fill=0,
