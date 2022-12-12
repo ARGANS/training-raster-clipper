@@ -89,6 +89,11 @@ def rasterize_geojson(
     xds = data_array
     gdf = training_classes
 
+    # plt.imshow(xds[:-1].values)
+    ax = xds[:-1].plot.imshow(vmax=np.percentile(xds, 99.5))
+    ax.axes.set_aspect("equal")
+    plt.show()
+
     raster_transform = list(float(k) for k in xds.spatial_ref.GeoTransform.split())
     raster_transform = Affine.from_gdal(*raster_transform)
 
@@ -130,11 +135,16 @@ def produce_clips(
 
     xds = data_array
 
+    # The first colon allows to work on all bands.
+    # The remaining filtering is used to extract reflectance values (for all bands)
+    # of all 2D indices matching the predicate:
+    # the polygon mask matches the current class in the loop
     feature_class_to_rgb_values = {
         c: xds.values[:, burnt_polygons == c].T for c in mapping.values()
     }
 
     # Refining: get a list of (R, G, B, feature class key) values
+    # Note: `c_` concatenated the provided columns
     return np.concatenate(
         [
             np.c_[values, np.ones(len(values)) * feature_class]
@@ -161,10 +171,19 @@ def classify_sentinel_data(
 ) -> np.ndarray:
 
     model = RandomForestClassifier()
-    model.fit(
-        classified_rgb_rows[:, : len(Color)],
-        classified_rgb_rows[:, len(Color)].astype(int),
-    )
+
+    # Remainder: Shape of the classified_rgb_rows array:
+    #
+    # B04;B03;B02;B8A;feature_key
+    # 0.107;0.1152;0.1041;0.1073;1
+    #
+    # classified_rgb_rows[:, : len(Color)] = B04;B03;B02;B8A
+    # classified_rgb_rows[:, -1] = feature_key
+
+    training_input_samples = classified_rgb_rows[:, :-1]
+    class_labels = classified_rgb_rows[:, -1].astype(int)
+
+    model.fit(training_input_samples, class_labels)
     classes = model.predict(rasters.values.reshape(len(Color), -1).T).reshape(
         rasters.shape[1:]
     )

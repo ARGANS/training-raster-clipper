@@ -28,7 +28,7 @@ from custom_types.custom_types import (
 
 def load_feature_polygons(input_path: Path) -> GeoDataFrame:
 
-    pass  # TODO
+    ...  # TODO
 
 
 def load_sentinel_data(
@@ -46,7 +46,7 @@ def load_sentinel_data(
         xr.DataArray: A DataArray containing the 3 RGB bands from the visible spectrum
     """
 
-    pass  # TODO
+    ...  # TODO
 
 
 def rasterize_geojson(
@@ -66,7 +66,7 @@ def rasterize_geojson(
                       0 where no polygon were found, and integers representing classes in order of occurence in the GeoDataFrame
     """
 
-    pass  # TODO
+    ...  # TODO
 
 
 def produce_clips(
@@ -82,7 +82,7 @@ def produce_clips(
         _type_: A list of the RGB values contained in the data_array and their corresponding classes
     """
 
-    pass  # TODO
+    ...  # TODO
 
 
 def persist_to_csv(
@@ -90,18 +90,18 @@ def persist_to_csv(
     csv_output_path: Path,
 ) -> None:
 
-    pass  # TODO
+    ...  # TODO
 
 
 def classify_sentinel_data(
     rasters: xr.DataArray, classified_rgb_rows: ClassifiedSamples
 ) -> np.ndarray:
 
-    pass  # TODO
+    ...  # TODO
 
 
 def persist_classification_to_raster(
     raster_output_path: Path, rasters: xr.DataArray, classification_result: np.ndarray
 ) -> None:
 
-    pass  # TODO
+    ...  # TODO

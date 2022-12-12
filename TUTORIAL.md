@@ -27,7 +27,42 @@ Below is a preview of the result you will get, classifying water, farmland and f
 
 ![picture 5](images/7b19ac4eff434e8a00969011b0f58374e67a81cb080c1cfd11f276925da1e2a3.png)
 
-## QGIS (departure)
+## Table of Contents
+
+- [Introduction to QGIS and Sentinel-2 Level-2 product processing with Python](#introduction-to-qgis-and-sentinel-2-level-2-product-processing-with-python)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction to QGIS](#introduction-to-qgis)
+    - [Download a Sentinel-2 product](#download-a-sentinel-2-product)
+    - [Import a Sentinel-2 product into QGIS](#import-a-sentinel-2-product-into-qgis)
+    - [Draw geometric shapes and classify them](#draw-geometric-shapes-and-classify-them)
+      - [Export the polygons to the GeoJSON format](#export-the-polygons-to-the-geojson-format)
+  - [Python](#python)
+    - [Introduction](#introduction)
+      - [Command line usage](#command-line-usage)
+      - [High-level process](#high-level-process)
+    - [Load a GeoJSON file (`geopanda`)](#load-a-geojson-file-geopanda)
+      - [Expected result](#expected-result)
+    - [Load a Sentinel-2 raster (`rioxarray`)](#load-a-sentinel-2-raster-rioxarray)
+      - [Locate the interesting bands](#locate-the-interesting-bands)
+      - [Use `rioxarray` to load the bands](#use-rioxarray-to-load-the-bands)
+      - [Expected result](#expected-result-1)
+    - [Rasterize the polygons](#rasterize-the-polygons)
+      - [Overview](#overview)
+      - [Rasterize the polygons](#rasterize-the-polygons-1)
+      - [Expected result](#expected-result-2)
+    - [Intersect the Sentinel-2 raster with polygons](#intersect-the-sentinel-2-raster-with-polygons)
+      - [Expected result](#expected-result-3)
+    - [Persist the intersection to a CSV](#persist-the-intersection-to-a-csv)
+      - [Expected result](#expected-result-4)
+    - [Train a machine learning model](#train-a-machine-learning-model)
+      - [Expected result](#expected-result-5)
+    - [Export the classification raster result](#export-the-classification-raster-result)
+      - [Expected result](#expected-result-6)
+  - [Back to QGIS](#back-to-qgis)
+    - [Import the classification raster result](#import-the-classification-raster-result)
+  - [Feedback](#feedback)
+
+## Introduction to QGIS
 
 ### Download a Sentinel-2 product
 
@@ -128,6 +163,8 @@ The `geopanda` library adds geographical capabilities over `pandas`, such as a `
 
 Since the GeoJSON is in a `4326` EPSG format, we convert it to the one used by the Sentinel-2 raster: `32631`. See [to_crs](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.to_crs.html)
 
+:arrow_forward: Return the GeoDataFrame representing the data contained in your GeoJSON file.
+
 #### Expected result
 
 ```log
@@ -227,8 +264,6 @@ Coordinates:
 
 ### Rasterize the polygons
 
-[TODO eschalk]
-
 ```python
 def rasterize_geojson(
     data_array: xr.DataArray,
@@ -244,7 +279,7 @@ The goal is to obtain a raster mask that will be later used to extract the refle
 
 #### Overview
 
-![picture 8](images/55971ca7b2985e909b297634bd10585847a31e61d750120bd8db39c171188894.png)
+![picture 9](images/62eca0e5f6d56e6875bc55e0ae774de006d479b03be976061a117e3a05c1992e.png)
 
 #### Rasterize the polygons
 
@@ -284,6 +319,10 @@ def produce_clips(
 ) -> ClassifiedSamples:
 ```
 
+The goal of this step is to extract the reflectance values of all pixels of the Sentinel-2 data intersecting with a polygon, assign them to the corresponding polygon's class, and so for all bands. The result is basically a table, with columns containing reflectance values of all bands, and a column containing the class of the pixel coming from the overlapping polygon.
+
+:arrow_forward: Return this table.
+
 #### Expected result
 
 ```log
@@ -298,8 +337,6 @@ INFO:root:array([[0.107 , 0.1152, 0.1041, 0.1073, 1.    ],
 ```
 
 ### Persist the intersection to a CSV
-
-[TODO eschalk]
 
 ```python
 def persist_to_csv(
@@ -345,6 +382,8 @@ def classify_sentinel_data(
 ) -> np.ndarray:
 ```
 
+We will now use the tools provided by `scikit-learn` to classify the rest of the pixels of the Sentinel rasters.
+
 #### Expected result
 
 ```log
@@ -366,13 +405,20 @@ _Note: Removed because the NIR band is included from the start_
 
 ### Export the classification raster result
 
-[TODO eschalk]
-
 ```python
 def persist_classification_to_raster(
     raster_output_path: Path, rasters: xr.DataArray, classification_result: np.ndarray
 ) -> None:
 ```
+
+TODO eschalk
+The main difficulty here is to reconstruct a new raster from the classification result and the original sentinel raster.
+
+:arrow_forward: Create an [`xarray.DataArray`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html) from the classification result. Reuse the "x" and "y" `coords` from the original sentinel raster. :warning" Assign `dims` in the correct order ("y" then "x").
+
+:arrow_forward: Set the CRS based on the `crs_wkt` attribute of the `spatial_ref` dim of the original sentinel raster. For this, use [`write_crs`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray.rioxarray.XRasterBase.write_crs) from the `rio` accessor. This accessor is added on `xarray.DataArray`s by the `rioxarray` extension.
+
+:arrow_forward: Persist the `xarray.DataArray` to a raster, using the [to_raster](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray.raster_array.RasterArray.to_raster) from the `rio` accessor
 
 #### Expected result
 
@@ -382,6 +428,10 @@ INFO:root:Written Classified Raster to generated\classified_points.csv
 INFO:root:Congratulations, you reached the end of the tutorial!
 ```
 
-## QGIS (arrival)
+## Back to QGIS
 
 ### Import the classification raster result
+
+## Feedback
+
+If you have any questions or feedback regarding this tutorial, please contact me (Etienne) or Pierre
