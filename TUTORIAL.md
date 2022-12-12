@@ -21,7 +21,7 @@ The Python code will be broken down in independant smaller functions, for easier
 
 [TODO : provide typed function signatures as a starting point for the coding practice, to be filled by the tutorial follower]
 
-TODO export palette with python and auto import in QGIS
+[TODO export palette with python and auto import in QGIS]
 
 ## QGIS (departure)
 
@@ -66,24 +66,63 @@ In the next part we will visualize it into QGIS.
 
 [TODO eschalk]
 
+#### Export the polygons to the GeoJSON format
+
 ## Python
 
-### Load a Sentinel-2 raster (`rioxarray`)
+### Introduction
 
-```python
-def load_sentinel_data(
-    sentinel_product_location: Path,
-    *,
-    resolution: Optional[Literal[60] | Literal[20] | Literal[10]] = 60,
-) -> xr.DataArray:
+The following commands will use bash. If you are a windows user with git installed, you can create a git bash shell from VSCode.
+
+First, run `poetry install` to satisfy the dependencies required by the project.
+
+To see the different arguments the script accept, run the following command from the project's root:
+
+```bash
+python ./training_raster_clipper/main.py -h
 ```
 
-[TODO eschalk]
+Below is an example of configuration:
+
+```bash
+TUTORIAL_STEP=NONE
+POLYGONS_INPUT_PATH=
+POLYGONS_INPUT_PATH=resources/solution/polygons.geojson
+RASTER_INPUT_PATH=
+RASTER_INPUT_PATH=D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE
+CSV_OUTPUT_PATH=generated/classified_points.csv
+RASTER_OUTPUT_PATH=generated/sklearn_raster.tiff
+
+python ./training_raster_clipper/main.py -p $POLYGONS_INPUT_PATH -r $RASTER_INPUT_PATH -o $CSV_OUTPUT_PATH -s $RASTER_OUTPUT_PATH -v -t $TUTORIAL_STEP
+```
+
+As you can see, the first parameter corresponds to the step in the code we want to reach. Use this during the tutorial to make the script work until the intended step.
+
+The next two are the paths to the input data, the GeoJSON polygons exported from QGIS as well as the location of the `.SAFE` file containing the Sentinel-2 product.
+
+The two last ones, already provided, specify the location of the outputs of the script, a CSV file of classified pixels of the Sentinel-2 product and a raster resulting from the `sklearn` classification.
 
 ### Load a GeoJSON file (`geopanda`)
 
 ```python
 def load_feature_polygons(input_path: Path) -> GeoDataFrame:
+```
+
+In this step, we read from a GeoJSON file and load the data to a `GeoDataFrame` from `geopanda`. See [read_file](https://geopandas.org/en/stable/docs/reference/api/geopandas.read_file.html)
+
+The `geopanda` library adds geographical capabilities over `pandas`, such as a `geometry` column containing the description of the geographical feature. The rest of the columns are retrieved from the GeoJSON metadata.
+
+Since the GeoJSON is in a `4326` EPSG format, we convert it to the one used by the Sentinel-2 raster: `32631`. See [to_crs](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.to_crs.html)
+
+### Load a Sentinel-2 raster (`rioxarray`)
+
+In this tutorial, we will use a resolution of 60 meters, the minimal available one, to use less memory and iterate faster.
+
+```python
+def load_sentinel_data(
+    sentinel_product_location: Path,
+    resolution: Resolution = 60,
+) -> xr.DataArray:
 ```
 
 [TODO eschalk]
