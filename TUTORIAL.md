@@ -76,6 +76,8 @@ In the next part we will visualize it into QGIS.
 
 ### Introduction
 
+#### Command line usage
+
 The following commands will use bash. If you are a windows user with git installed, you can create a git bash shell from VSCode.
 
 First, run `poetry install` to satisfy the dependencies required by the project.
@@ -107,6 +109,10 @@ The next two are the paths to the input data, the GeoJSON polygons exported from
 The two last ones, already provided, specify the location of the outputs of the script, a CSV file of classified pixels of the Sentinel-2 product and a raster resulting from the `sklearn` classification.
 
 Note: you can see the final result by using the cheat flag (`-c`)
+
+#### High-level process
+
+![picture 6](images/fc792852fe7bc30966031a7cdc829e45c6ccb77558321d5fc78302ed6e1b0d13.png)
 
 ### Load a GeoJSON file (`geopanda`)
 
@@ -282,8 +288,6 @@ def persist_to_csv(
 
 #### Expected result
 
-[TODO eschalk]
-
 ```log
 INFO:root:Executing step: TutorialStep.PERSIST_TO_CSV
 INFO:root:Written CSV output generated\classified_points.csv
@@ -330,8 +334,6 @@ def persist_classification_to_raster(
 ```
 
 #### Expected result
-
-[TODO eschalk]
 
 ```log
 INFO:root:Executing step: TutorialStep.PERSIST_CLASSIFICATION_TO_RASTER
