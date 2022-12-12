@@ -23,6 +23,10 @@ The Python code will be broken down in independant smaller functions, for easier
 
 [TODO export palette with python and auto import in QGIS]
 
+Below is a preview of the result you will get, classifying water, farmland and forest. You can notice noise due to clouds in the top right of the image:
+
+![picture 5](images/7b19ac4eff434e8a00969011b0f58374e67a81cb080c1cfd11f276925da1e2a3.png)
+
 ## QGIS (departure)
 
 ### Download a Sentinel-2 product
@@ -101,6 +105,8 @@ As you can see, the first parameter corresponds to the step in the code we want 
 The next two are the paths to the input data, the GeoJSON polygons exported from QGIS as well as the location of the `.SAFE` file containing the Sentinel-2 product.
 
 The two last ones, already provided, specify the location of the outputs of the script, a CSV file of classified pixels of the Sentinel-2 product and a raster resulting from the `sklearn` classification.
+
+Note: you can see the final result by using the cheat flag (`-c`)
 
 ### Load a GeoJSON file (`geopanda`)
 

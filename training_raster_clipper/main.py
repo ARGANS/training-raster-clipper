@@ -136,6 +136,7 @@ def main():
 def interrupt_if_step_reached(
     tutorial_step: TutorialStep, max_tutorial_step: TutorialStep
 ):
+    info(f"Executing step: {tutorial_step}")
     if tutorial_step.value < max_tutorial_step.value:
         exit(f"Exit after step {tutorial_step}")
 
@@ -197,7 +198,10 @@ def parse_arguments(argument_parser: argparse.ArgumentParser):
 
 
 def info(object):
-    logging.info(pformat(object))
+    if type(object) == str:
+        logging.info(object)
+    else:
+        logging.info(pformat(object))
 
 
 def show(xds):
