@@ -90,6 +90,7 @@ def rasterize_geojson(
     gdf = training_classes
 
     # plt.imshow(xds[:-1].values)
+    breakpoint()
     ax = xds[:-1].plot.imshow(vmax=np.percentile(xds, 99.5))
     ax.axes.set_aspect("equal")
     plt.show()

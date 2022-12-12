@@ -25,6 +25,8 @@ The Python code will be broken down in independant smaller functions, for easier
 
 Below is a preview of the result you will get, classifying water, farmland and forest. You can notice noise due to clouds in the top right of the image:
 
+TODO eschalk show the legend for classes
+
 ![picture 5](images/7b19ac4eff434e8a00969011b0f58374e67a81cb080c1cfd11f276925da1e2a3.png)
 
 ## Table of Contents
@@ -130,9 +132,9 @@ Below is an example of configuration:
 ```bash
 TUTORIAL_STEP=NONE
 POLYGONS_INPUT_PATH=
-# POLYGONS_INPUT_PATH=resources/solution/polygons.geojson
+POLYGONS_INPUT_PATH=resources/solution/polygons.geojson
 RASTER_INPUT_PATH=
-# RASTER_INPUT_PATH=D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE
+RASTER_INPUT_PATH=D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE
 CSV_OUTPUT_PATH=generated/classified_points.csv
 RASTER_OUTPUT_PATH=generated/sklearn_raster.tiff
 

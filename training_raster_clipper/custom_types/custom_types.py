@@ -14,7 +14,7 @@ ClassifiedSamples = Sequence[Sequence[float]]
 PolygonMask = npt.NDArray[np.uint8]
 
 # Allowed values for the Sentinel-2 Resolution
-Resolution = Optional[Literal[60] | Literal[20] | Literal[10]]
+Resolution = Optional[Literal[60, 20, 10]]
 
 
 class ColorVisible(Enum):
