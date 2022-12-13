@@ -47,7 +47,8 @@ class TutorialStep(Enum):
     PERSIST_TO_CSV = 500
     CLASSIFY_SENTINEL_DATA = 600
     PERSIST_CLASSIFICATION_TO_RASTER = 700
-    ALL = 9999999
+    ALL = 1000
+    END = 9999999
 
 
 def main():
@@ -56,7 +57,7 @@ def main():
     args = parse_arguments(build_argument_parser())
 
     verbose = args.verbose
-    show_plots = True
+    show_plots = args.figures
 
     raster_input_path = Path(args.raster_input_path)
     polygons_input_path = Path(args.polygons_input_path)
@@ -96,7 +97,8 @@ def main():
         info(rasters, "rasters")
     if show_plots:
         plot_data_array(
-            rasters, f"({int(current_step.value/100)}: {current_step.name})"
+            rasters,
+            f"({int(current_step.value/100)}: {current_step.name})",
         )
 
     # --
@@ -154,6 +156,9 @@ def main():
 
     info("Congratulations, you reached the end of the tutorial!")
 
+    current_step = TutorialStep.END
+    interrupt_if_step_reached(tutorial_step, current_step)
+
 
 def interrupt_if_step_reached(
     tutorial_step: TutorialStep, max_tutorial_step: TutorialStep
@@ -208,6 +213,15 @@ def build_argument_parser() -> argparse.ArgumentParser:
         default=False,
         help="Cheating: you can switch between the solution file or your own work, as they define the same functions.",
     )
+    parser.add_argument(
+        "-f",
+        "--figures",
+        type=bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="Show figures at the end of the script execution. By default True",
+    )
     return parser
 
 
@@ -240,31 +254,24 @@ def info(
 
 def plot_data_array(xds: xr.DataArray, title: str):
     plt.figure()
-    plt.title(title)
-    plt.legend()
 
     ax = xds[[0, 1, 2]].plot.imshow(vmax=np.percentile(xds, 99.5))
     ax.axes.set_aspect("equal")
-
-    # ax = xds.plot.imshow(vmax=np.percentile(xds, 99.5))
-    # ax.axes.set_aspect("equal")
+    ax.axes.set_title(title)
 
 
 def plot_ndarray(array: npt.NDArray[np.uint8], title: str):
     plt.figure()
-    plt.title(title)
-    plt.legend()
 
     ax = plt.imshow(array)
     ax.axes.set_aspect("equal")
+    ax.axes.set_title(title)
 
 
 def plot_geodataframe(gdf: GeoDataFrame, title: str):
-    # plt.figure()
-    # plt.title(title)
-    # plt.legend()
-
-    gdf.plot(legend=True, color=gdf["color"])
+    ax = gdf.plot(legend=True, color=gdf["color"])
+    ax.axes.set_aspect("equal")
+    ax.axes.set_title(title)
 
 
 if __name__ == "__main__":
