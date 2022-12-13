@@ -19,13 +19,7 @@ This introduction also assumes a prior minimal knowledge of the Python language 
 
 The Python code will be broken down in independant smaller functions, for easier progress tracking and debugging.
 
-[TODO : provide typed function signatures as a starting point for the coding practice, to be filled by the tutorial follower]
-
-[TODO export palette with python and auto import in QGIS]
-
 Below is a preview of the result you will get, classifying water, farmland and forest. You can notice noise due to clouds in the top right of the image:
-
-TODO eschalk show the legend for classes
 
 ![picture 5](images/7b19ac4eff434e8a00969011b0f58374e67a81cb080c1cfd11f276925da1e2a3.png)
 
@@ -42,27 +36,28 @@ TODO eschalk show the legend for classes
     - [Introduction](#introduction)
       - [Command line usage](#command-line-usage)
       - [High-level process](#high-level-process)
-    - [Load a GeoJSON file (`geopanda`)](#load-a-geojson-file-geopanda)
+    - [(1) Load a GeoJSON file with `geopanda`](#1-load-a-geojson-file-with-geopanda)
       - [Expected result](#expected-result)
-    - [Load a Sentinel-2 raster (`rioxarray`)](#load-a-sentinel-2-raster-rioxarray)
+    - [(2) Load a Sentinel-2 raster with `rioxarray`](#2-load-a-sentinel-2-raster-with-rioxarray)
       - [Locate the interesting bands](#locate-the-interesting-bands)
       - [Use `rioxarray` to load the bands](#use-rioxarray-to-load-the-bands)
       - [Expected result](#expected-result-1)
-    - [Rasterize the polygons](#rasterize-the-polygons)
+    - [(3) Rasterize the polygons](#3-rasterize-the-polygons)
       - [Overview](#overview)
-      - [Rasterize the polygons](#rasterize-the-polygons-1)
+      - [Rasterize the polygons](#rasterize-the-polygons)
       - [Expected result](#expected-result-2)
-    - [Intersect the Sentinel-2 raster with polygons](#intersect-the-sentinel-2-raster-with-polygons)
+    - [(4) Intersect the Sentinel-2 raster with polygons](#4-intersect-the-sentinel-2-raster-with-polygons)
       - [Expected result](#expected-result-3)
-    - [Persist the intersection to a CSV](#persist-the-intersection-to-a-csv)
+    - [(5) Persist the intersection to a CSV](#5-persist-the-intersection-to-a-csv)
       - [Expected result](#expected-result-4)
-    - [Train a machine learning model](#train-a-machine-learning-model)
+    - [(6) Train a machine learning model](#6-train-a-machine-learning-model)
       - [Expected result](#expected-result-5)
-    - [Export the classification raster result](#export-the-classification-raster-result)
+    - [(7) Export the classification raster result](#7-export-the-classification-raster-result)
       - [Expected result](#expected-result-6)
   - [Back to QGIS](#back-to-qgis)
     - [Import the classification raster result](#import-the-classification-raster-result)
   - [Feedback](#feedback)
+  - [Tout Doux](#tout-doux)
 
 ## Introduction to QGIS
 
@@ -132,9 +127,7 @@ Below is an example of configuration:
 ```bash
 TUTORIAL_STEP=NONE
 POLYGONS_INPUT_PATH=
-POLYGONS_INPUT_PATH=resources/solution/polygons.geojson
 RASTER_INPUT_PATH=
-RASTER_INPUT_PATH=D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE
 CSV_OUTPUT_PATH=generated/classified_points.csv
 RASTER_OUTPUT_PATH=generated/sklearn_raster.tiff
 
@@ -145,15 +138,29 @@ As you can see, the first parameter corresponds to the step in the code we want 
 
 The next two are the paths to the input data, the GeoJSON polygons exported from QGIS as well as the location of the `.SAFE` file containing the Sentinel-2 product.
 
+:arrow_forward: You have to configure them yourself. Example of such a configuration:
+
+```bash
+TUTORIAL_STEP=NONE
+POLYGONS_INPUT_PATH=resources/solution/polygons.geojson
+RASTER_INPUT_PATH=D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE
+CSV_OUTPUT_PATH=generated/classified_points.csv
+RASTER_OUTPUT_PATH=generated/sklearn_raster.tiff
+```
+
 The two last ones, already provided, specify the location of the outputs of the script, a CSV file of classified pixels of the Sentinel-2 product and a raster resulting from the `sklearn` classification.
 
-Note: you can see the final result by using the cheat flag (`-c`)
+Along the tutorial, you will have to write implementations of the functions provided in `implementation/your_work.py`. Each numbered sub-section corresponds to a function.
+
+Before starting, you can have a glimpse of what the final result will like by using the cheat flag (`-c`). It will use the solution implementations of the functions from `implementation/solutions.py`.
 
 #### High-level process
 
-![picture 6](images/fc792852fe7bc30966031a7cdc829e45c6ccb77558321d5fc78302ed6e1b0d13.png)
+Below is a diagram representing the data flow, from your two inputs (the Sentinel-2 product and a GeoJSON file containing multipolygons), up to the final result: the classified Sentinel-2 product
 
-### Load a GeoJSON file (`geopanda`)
+![picture 11](images/c176acb489c87139b438be9f3e50d922a3f3ff9c186c224ccb6818dd6899a043.png)
+
+### (1) Load a GeoJSON file with `geopanda`
 
 ```python
 def load_feature_polygons(input_path: Path) -> GeoDataFrame:
@@ -179,7 +186,7 @@ INFO:root:     id   class                                           geometry
 
 :eyes: We can see again our 3 MultiPolygons created from QGIS, each of them corresponding to a specific class
 
-### Load a Sentinel-2 raster (`rioxarray`)
+### (2) Load a Sentinel-2 raster with `rioxarray`
 
 ```python
 def load_sentinel_data(
@@ -264,7 +271,7 @@ Coordinates:
     spatial_ref  int32 0
 ```
 
-### Rasterize the polygons
+### (3) Rasterize the polygons
 
 ```python
 def rasterize_geojson(
@@ -311,9 +318,7 @@ INFO:root:array([[0, 0, 0, ..., 0, 0, 0],
 INFO:root:{'FARM': 3, 'FOREST': 2, 'WATER': 1}
 ```
 
-### Intersect the Sentinel-2 raster with polygons
-
-[TODO eschalk]
+### (4) Intersect the Sentinel-2 raster with polygons
 
 ```python
 def produce_clips(
@@ -338,7 +343,7 @@ INFO:root:array([[0.107 , 0.1152, 0.1041, 0.1073, 1.    ],
        [0.2078, 0.1793, 0.1443, 0.2912, 3.    ]])
 ```
 
-### Persist the intersection to a CSV
+### (5) Persist the intersection to a CSV
 
 ```python
 def persist_to_csv(
@@ -373,9 +378,10 @@ B04;B03;B02;B8A;feature_key
 0.2078;0.1793;0.1443;0.2912;3
 ```
 
-### Train a machine learning model
+### (6) Train a machine learning model
 
 [TODO eschalk]
+:information_source: For more details about the theoretical background of this section, you can ask Pierre Louvart
 
 ```python
 def classify_sentinel_data(
@@ -385,6 +391,16 @@ def classify_sentinel_data(
 ```
 
 We will now use the tools provided by `scikit-learn` to classify the rest of the pixels of the Sentinel rasters.
+
+:arrow_forward: Instantiate a [`RandomForestClassifier`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html)
+
+:arrow_forward: Extract the training input samples from the `classified_rgb_rows`: they are all the columns except the last one from
+
+:arrow_forward: Extract the class labels from the `classified_rgb_rows`: it is the last remaining column
+
+:arrow_forward: Train the model using [`RandomForestClassifier.fit`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html#sklearn.ensemble.RandomForestClassifier.fit)
+
+:arrow_formard: Use the model to [`predict`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html#sklearn.ensemble.RandomForestClassifier.predict) the classes of the rest of the Sentinel-2 raster, and return the result. The prediction needs a list of elements, with each element being a list of reflectances in all bands. See `reshape` from numpy. Remainder: `rasters.values` gives access to the underlying numpy array.
 
 #### Expected result
 
@@ -405,7 +421,7 @@ INFO:root:array([[3, 3, 3, ..., 2, 2, 2],
 
 _Note: Removed because the NIR band is included from the start_
 
-### Export the classification raster result
+### (7) Export the classification raster result
 
 ```python
 def persist_classification_to_raster(
@@ -413,7 +429,6 @@ def persist_classification_to_raster(
 ) -> None:
 ```
 
-TODO eschalk
 The main difficulty here is to reconstruct a new raster from the classification result and the original sentinel raster.
 
 :arrow_forward: Create an [`xarray.DataArray`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html) from the classification result. Reuse the "x" and "y" `coords` from the original sentinel raster. :warning" Assign `dims` in the correct order ("y" then "x").
@@ -437,3 +452,12 @@ INFO:root:Congratulations, you reached the end of the tutorial!
 ## Feedback
 
 If you have any questions or feedback regarding this tutorial, please contact me (Etienne) or Pierre
+
+## Tout Doux
+
+- [ ] TODO eschalk export palette with python and auto import in QGIS
+- [ ] TODO eschalk show the legend for classes
+- [ ] TODO eschalk add title to plot
+- [ ] TODO eschalk improve logging
+- [ ] TODO eschalk create a helper imshow function
+- [ ] TODO eschalk Create on the QGIS part a color field as well as the class field

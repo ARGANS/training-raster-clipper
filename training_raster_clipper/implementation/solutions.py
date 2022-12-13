@@ -45,7 +45,6 @@ def load_sentinel_data(
     Returns:
         xr.DataArray: A DataArray containing the 3 RGB bands from the visible spectrum
     """
-
     # Assumes that the glob will return only one subfolder
     band_file_paths = {
         color: list(
@@ -90,10 +89,9 @@ def rasterize_geojson(
     gdf = training_classes
 
     # plt.imshow(xds[:-1].values)
-    breakpoint()
-    ax = xds[:-1].plot.imshow(vmax=np.percentile(xds, 99.5))
-    ax.axes.set_aspect("equal")
-    plt.show()
+    # TODO eschalk create a helper function to visualize rasters
+    # TODO eschalk add an option to plot or not the data
+    # TODO eschalk do the plt show just before exiting the script
 
     raster_transform = list(float(k) for k in xds.spatial_ref.GeoTransform.split())
     raster_transform = Affine.from_gdal(*raster_transform)
@@ -185,11 +183,15 @@ def classify_sentinel_data(
     class_labels = classified_rgb_rows[:, -1].astype(int)
 
     model.fit(training_input_samples, class_labels)
+
+    # rasters.values is the underlying numpy array
+    # The first dimension is the bands
+    # The reshape extract the list of all reflectance values
+
     classes = model.predict(rasters.values.reshape(len(Color), -1).T).reshape(
         rasters.shape[1:]
     )
-    plt.imshow(classes)
-    plt.show()
+
     return classes
 
 

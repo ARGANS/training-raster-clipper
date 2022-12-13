@@ -1,12 +1,6 @@
 # training-raster-clipper
 
-## Summary of the training
-
-The goal is to 
-- use QGIS 
-- use xarray etc
-
-
+## :arrow_forward: [TUTORIAL](TUTORIAL.md) :arrow_backward:
 
 ## Usage example
 
@@ -19,9 +13,10 @@ poetry run python ./training_raster_clipper/main.py -r D:/PROFILS/ESCHALK/DOWNLO
 ```bash
 PS D:\Profils\eschalk\dev\argans\projects\python\training\training-raster-clipper> poetry run python ./training_raster_clipper/main.py -r D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE -p resources/polygons.geojson -o generated/classified_points.csv -s generated/sklearn_raster.tiff -cv
 ```
+
 ## Sentinel-2 Product Structure
 
-See official documentation: 
+See official documentation:
 https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-2-msi/data-formats
 
 Structure of an example product downloaded from https://scihub.copernicus.eu/dhus/#/home
@@ -47,7 +42,7 @@ D:\PROFILS\ESCHALK\DOWNLOADS\S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_202211
 └───rep_info
 ```
 
-## Opening Raster 
+## Opening Raster
 
 See [Adding band description to rioxarray to_raster()](https://stackoverflow.com/questions/65616979/adding-band-description-to-rioxarray-to-raster)
 
@@ -55,10 +50,10 @@ See [Adding band description to rioxarray to_raster()](https://stackoverflow.com
 
 TypeError: GDAL-style transforms have been deprecated: https://gis.stackexchange.com/questions/403148/type-error-for-gdal-gdal-style-transforms-have-been-deprecated
 
-## Examples of selection 
+## Examples of selection
 
 ```python
-(Pdb)  xds.sel(band=Color.RED.value)                  
+(Pdb)  xds.sel(band=Color.RED.value)
 <xarray.DataArray (y: 1830, x: 1830)>
 array([[0.172 , 0.1677, 0.1614, ..., 0.1329, 0.1313, 0.1291],
        [0.171 , 0.1666, 0.1674, ..., 0.1315, 0.1296, 0.1329],
@@ -75,7 +70,7 @@ Coordinates:
 Attributes:
     scale_factor:  1.0
     add_offset:    0.0
-(Pdb)  xds.sel(band=Color.RED.value)[[0, 1], [0, 1]]   
+(Pdb)  xds.sel(band=Color.RED.value)[[0, 1], [0, 1]]
 <xarray.DataArray (y: 2, x: 2)>
 array([[0.172 , 0.1677],
        [0.171 , 0.1666]])
@@ -90,7 +85,6 @@ Attributes:
 ```
 
 ## Drafts
-
 
 ```python
     xds = merge_arrays(
@@ -140,4 +134,55 @@ Attributes:
 
     # TODO eschalk
     # plt.show()
+```
+
+### Playing with `np.reshape`
+
+It allows to manipulate the dimension of arrays. An example is more explanatory:
+
+:information_source: `-1` is a wildcard to "take the rest" without having to specify the remaning numbers. For a 16-element list, the product of the arguments given must be equal to N (eg for `N=16 = 4 * 4 = 2 * 8 = 8 * 2`)
+
+```python
+>>> np.arange(16)
+array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15])
+>>> np.arange(16).reshape(4,-1)
+array([[ 0,  1,  2,  3],
+       [ 4,  5,  6,  7],
+       [ 8,  9, 10, 11],
+       [12, 13, 14, 15]])
+>>> np.arange(16).reshape(2, -1)
+array([[ 0,  1,  2,  3,  4,  5,  6,  7],
+       [ 8,  9, 10, 11, 12, 13, 14, 15]])
+>>> np.arange(16).reshape(2, 8)
+array([[ 0,  1,  2,  3,  4,  5,  6,  7],
+       [ 8,  9, 10, 11, 12, 13, 14, 15]])
+>>> np.arange(16).reshape(-1, 2)
+array([[ 0,  1],
+       [ 2,  3],
+       [ 4,  5],
+       [ 6,  7],
+       [ 8,  9],
+       [10, 11],
+       [12, 13],
+       [14, 15]])
+>>> np.arange(16).reshape(8, 2)
+array([[ 0,  1],
+       [ 2,  3],
+       [ 4,  5],
+       [ 6,  7],
+       [ 8,  9],
+       [10, 11],
+       [12, 13],
+       [14, 15]])
+>>> np.arange(27).reshape(9, -1)
+array([[ 0,  1,  2],
+       [ 3,  4,  5],
+       [ 6,  7,  8],
+       [ 9, 10, 11],
+       [12, 13, 14],
+       [15, 16, 17],
+       [18, 19, 20],
+       [21, 22, 23],
+       [24, 25, 26]])
+>>>
 ```

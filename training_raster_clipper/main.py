@@ -56,6 +56,7 @@ def main():
     args = parse_arguments(build_argument_parser())
 
     verbose = args.verbose
+    show_plots = True
 
     raster_input_path = Path(args.raster_input_path)
     polygons_input_path = Path(args.polygons_input_path)
@@ -76,53 +77,74 @@ def main():
 
     # --
 
-    interrupt_if_step_reached(tutorial_step, TutorialStep.LOAD_FEATURE_POLYGONS)
+    current_step = TutorialStep.LOAD_FEATURE_POLYGONS
+    interrupt_if_step_reached(tutorial_step, current_step)
     polygons = interface.load_feature_polygons(polygons_input_path)
     if verbose:
-        info(polygons)
+        info(polygons, "polygons")
+    if show_plots:
+        plot_geodataframe(
+            polygons, f"({int(current_step.value/100)}: {current_step.name})"
+        )
 
     # --
 
-    interrupt_if_step_reached(tutorial_step, TutorialStep.LOAD_SENTINEL_DATA)
+    current_step = TutorialStep.LOAD_SENTINEL_DATA
+    interrupt_if_step_reached(tutorial_step, current_step)
     rasters = interface.load_sentinel_data(raster_input_path)
     if verbose:
-        info(rasters)
+        info(rasters, "rasters")
+    if show_plots:
+        plot_data_array(
+            rasters, f"({int(current_step.value/100)}: {current_step.name})"
+        )
 
     # --
 
-    interrupt_if_step_reached(tutorial_step, TutorialStep.RASTERIZE_GEOJSON)
+    current_step = TutorialStep.RASTERIZE_GEOJSON
+    interrupt_if_step_reached(tutorial_step, current_step)
     burnt_polygons, mapping = interface.rasterize_geojson(rasters, polygons)
     if verbose:
-        info(burnt_polygons)
-        info(mapping)
+        info(burnt_polygons, "burnt_polygons")
+        info(mapping, "mapping")
+    if show_plots:
+        plot_ndarray(
+            burnt_polygons, f"({int(current_step.value/100)}: {current_step.name})"
+        )
 
     # --
 
-    interrupt_if_step_reached(tutorial_step, TutorialStep.PRODUCE_CLIPS)
+    current_step = TutorialStep.PRODUCE_CLIPS
+    interrupt_if_step_reached(tutorial_step, current_step)
     classified_rgb_rows = interface.produce_clips(rasters, burnt_polygons, mapping)
     if verbose:
-        info(classified_rgb_rows)
+        info(classified_rgb_rows, "classified_rgb_rows")
 
     # --
 
-    interrupt_if_step_reached(tutorial_step, TutorialStep.PERSIST_TO_CSV)
+    current_step = TutorialStep.PERSIST_TO_CSV
+    interrupt_if_step_reached(tutorial_step, current_step)
     interface.persist_to_csv(classified_rgb_rows, csv_output_path)
     info(f"Written CSV output {csv_output_path}")
 
     # --
 
-    interrupt_if_step_reached(tutorial_step, TutorialStep.CLASSIFY_SENTINEL_DATA)
+    current_step = TutorialStep.CLASSIFY_SENTINEL_DATA
+    interrupt_if_step_reached(tutorial_step, current_step)
     classification_result = interface.classify_sentinel_data(
         rasters, classified_rgb_rows
     )
     if verbose:
-        info(classification_result)
-
+        info(classification_result, "classification_result")
+    if show_plots:
+        plot_ndarray(
+            classification_result,
+            f"({int(current_step.value/100)}: {current_step.name})",
+        )
     # --
 
-    interrupt_if_step_reached(
-        tutorial_step, TutorialStep.PERSIST_CLASSIFICATION_TO_RASTER
-    )
+    current_step = TutorialStep.PERSIST_CLASSIFICATION_TO_RASTER
+    interrupt_if_step_reached(tutorial_step, current_step)
     interface.persist_classification_to_raster(
         raster_output_path, rasters, classification_result
     )
@@ -137,8 +159,10 @@ def interrupt_if_step_reached(
     tutorial_step: TutorialStep, max_tutorial_step: TutorialStep
 ):
     if tutorial_step.value < max_tutorial_step.value:
+        plt.show()
         exit(f"Exit after step {tutorial_step}")
-    info(f"Executing step: {max_tutorial_step}")
+    else:
+        info(f"Executing step: {max_tutorial_step}")
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -197,16 +221,50 @@ def parse_arguments(argument_parser: argparse.ArgumentParser):
     return args
 
 
-def info(object):
-    if type(object) == str:
-        logging.info(object)
+def info(
+    object,
+    /,
+    variable_name=None,
+):
+    if variable_name:
+        if type(object) == str:
+            logging.info(f"{variable_name}:\n{object}")
+        else:
+            logging.info(f"{variable_name}:\n{pformat(object)}")
     else:
-        logging.info(pformat(object))
+        if type(object) == str:
+            logging.info(object)
+        else:
+            logging.info(pformat(object))
 
 
-def show(xds):
-    ax = xds.plot.imshow(vmax=np.percentile(xds, 99.5))
+def plot_data_array(xds: xr.DataArray, title: str):
+    plt.figure()
+    plt.title(title)
+    plt.legend()
+
+    ax = xds[[0, 1, 2]].plot.imshow(vmax=np.percentile(xds, 99.5))
     ax.axes.set_aspect("equal")
+
+    # ax = xds.plot.imshow(vmax=np.percentile(xds, 99.5))
+    # ax.axes.set_aspect("equal")
+
+
+def plot_ndarray(array: npt.NDArray[np.uint8], title: str):
+    plt.figure()
+    plt.title(title)
+    plt.legend()
+
+    ax = plt.imshow(array)
+    ax.axes.set_aspect("equal")
+
+
+def plot_geodataframe(gdf: GeoDataFrame, title: str):
+    # plt.figure()
+    # plt.title(title)
+    # plt.legend()
+
+    gdf.plot(legend=True, color=gdf["color"])
 
 
 if __name__ == "__main__":
