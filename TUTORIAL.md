@@ -35,6 +35,8 @@ Below is a preview of the result you will get, classifying water, farmland and f
   - [Python](#python)
     - [Introduction](#introduction)
       - [Command line usage](#command-line-usage)
+      - [`launch.sh` script](#launchsh-script)
+      - [Write your own code](#write-your-own-code)
       - [High-level process](#high-level-process)
     - [(1) Load a GeoJSON file with `geopanda`](#1-load-a-geojson-file-with-geopanda)
       - [Expected result](#expected-result)
@@ -57,6 +59,7 @@ Below is a preview of the result you will get, classifying water, farmland and f
   - [Back to QGIS](#back-to-qgis)
     - [Import the classification raster result](#import-the-classification-raster-result)
   - [Feedback](#feedback)
+  - [Improvements ideas](#improvements-ideas)
   - [Tout Doux](#tout-doux)
 
 ## Introduction to QGIS
@@ -112,9 +115,15 @@ For each class (Water, Farmland and Forest), a unique MultiPolygon will be gener
 
 #### Command line usage
 
+:information_source: All commands assume that you `cd`ed into this project root folder.
+
 The following commands will use bash. If you are a windows user with git installed, you can create a git bash shell from VSCode.
 
-First, run `poetry install` to satisfy the dependencies required by the project.
+First, to satisfy the dependencies required by the project, run:
+
+```bash
+poetry install
+```
 
 To see the different arguments the script accept, run the following command from the project's root:
 
@@ -122,37 +131,25 @@ To see the different arguments the script accept, run the following command from
 python ./training_raster_clipper/main.py -h
 ```
 
-Below is an example of configuration:
+#### `launch.sh` script
+
+You can use the `launch.sh` script and change it according to your needs so you don't have to type a long command, just:
 
 ```bash
-TUTORIAL_STEP=NONE
-POLYGONS_INPUT_PATH=
-RASTER_INPUT_PATH=
-CSV_OUTPUT_PATH=generated/classified_points.csv
-RASTER_OUTPUT_PATH=generated/sklearn_raster.tiff
-
-python ./training_raster_clipper/main.py -p $POLYGONS_INPUT_PATH -r $RASTER_INPUT_PATH -o $CSV_OUTPUT_PATH -s $RASTER_OUTPUT_PATH -v -t $TUTORIAL_STEP
+./launch.sh
 ```
 
-As you can see, the first parameter corresponds to the step in the code we want to reach. Use this during the tutorial to make the script work until the intended step.
+- TUTORIAL_STEP: Corresponds to the step in the code we want to reach. Use this during the tutorial to make the script work until the intended step.
+- POLYGONS_INPUT_PATH: The GeoJSON polygons exported from QGIS
+- RASTER_INPUT_PATH: The location of the `.SAFE` file containing the Sentinel-2 product
+- CSV_OUTPUT_PATH: A CSV file of classified pixels of the Sentinel-2 product
+- RASTER_OUTPUT_PATH: A raster resulting from the `sklearn` classification
 
-The next two are the paths to the input data, the GeoJSON polygons exported from QGIS as well as the location of the `.SAFE` file containing the Sentinel-2 product.
-
-:arrow_forward: You have to configure them yourself. Example of such a configuration:
-
-```bash
-TUTORIAL_STEP=NONE
-POLYGONS_INPUT_PATH=resources/solution/polygons.geojson
-RASTER_INPUT_PATH=D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE
-CSV_OUTPUT_PATH=generated/classified_points.csv
-RASTER_OUTPUT_PATH=generated/sklearn_raster.tiff
-```
-
-The two last ones, already provided, specify the location of the outputs of the script, a CSV file of classified pixels of the Sentinel-2 product and a raster resulting from the `sklearn` classification.
+#### Write your own code
 
 Along the tutorial, you will have to write implementations of the functions provided in `implementation/your_work.py`. Each numbered sub-section corresponds to a function.
 
-Before starting, you can have a glimpse of what the final result will like by using the cheat flag (`-c`). It will use the solution implementations of the functions from `implementation/solutions.py`.
+Before starting, you can have a glimpse of what the final result will look like by using the cheat flag (`-c`). It will use the solution implementations of the functions from `implementation/solutions.py`. Remove this flag when you start coding!
 
 #### High-level process
 
@@ -452,6 +449,10 @@ INFO:root:Congratulations, you reached the end of the tutorial!
 ## Feedback
 
 If you have any questions or feedback regarding this tutorial, please contact me (Etienne) or Pierre
+
+## Improvements ideas
+
+- You can add another step to persist the model, so it can be computed once and then reused on other images, rather than recalculating it on each script execution
 
 ## Tout Doux
 

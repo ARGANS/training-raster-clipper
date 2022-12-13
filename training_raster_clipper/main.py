@@ -143,6 +143,7 @@ def main():
             classification_result,
             f"({int(current_step.value/100)}: {current_step.name})",
         )
+
     # --
 
     current_step = TutorialStep.PERSIST_CLASSIFICATION_TO_RASTER
@@ -219,7 +220,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
         type=bool,
         nargs="?",
         const=True,
-        default=True,
+        default=False,
         help="Show figures at the end of the script execution. By default True",
     )
     return parser
@@ -231,6 +232,7 @@ def parse_arguments(argument_parser: argparse.ArgumentParser):
     assert args.raster_input_path, "Missing argument: raster_input_path"
     assert args.polygons_input_path, "Missing argument: polygons_input_path"
     assert args.csv_output_path, "Missing argument: csv_output_path"
+    assert args.raster_output_path, "Missing argument: raster_output_path"
 
     return args
 

@@ -22,4 +22,5 @@ python ./training_raster_clipper/main.py \
     -s $RASTER_OUTPUT_PATH \
     -t $TUTORIAL_STEP \
     -v \
-    -c # cheat mode, to remove 
+    -f \
+    -c # cheat mode, to remove when you'll start coding :)
