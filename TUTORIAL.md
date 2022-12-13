@@ -99,11 +99,9 @@ We find again some information in the filename: `S2A` = Sentinel-2A, `MSIL2A`= M
 
 In the next part we will visualize it into QGIS.
 
-:information_source: If for some reason you cannot download the Sentinel-2 product, a set of the minimal files required to continue the tutorial is available under: `resources/solution/minimal_required_sentinel_files/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE/GRANULE/L2A_T31TCJ_A038658_20221116T105603/IMG_DATA/R60m`
+:information_source: If for some reason you cannot download the Sentinel-2 product, a set of the minimal files required to continue the tutorial is available under: `resources/solution/example_sentinel_files/SENTINEL.SAFE/GRANULE/L2A_T31TCJ_A038658_20221116T105603/IMG_DATA/R60m`
 
 ### Import a Sentinel-2 product into QGIS
-
-[TODO eschalk]
 
 #### Files to import
 
@@ -468,7 +466,6 @@ B04;B03;B02;B8A;feature_key
 
 ### (6) Train a machine learning model
 
-[TODO eschalk]
 :information_source: For more details about the theoretical background of this section, you can ask Pierre Louvart
 
 ```python
@@ -551,9 +548,9 @@ If you have any questions or feedback regarding this tutorial, please contact me
 
 ## Tout Doux
 
-- [ ] TODO eschalk export palette with python and auto import in QGIS
-- [ ] TODO eschalk show the legend for classes
-- [ ] TODO eschalk add title to plot
-- [ ] TODO eschalk improve logging
-- [ ] TODO eschalk create a helper imshow function
-- [ ] TODO eschalk Create on the QGIS part a color field as well as the class field
+- [ ] eschalk export palette with python and auto import in QGIS
+- [ ] eschalk show the legend for classes
+- [x] eschalk add title to plot
+- [x] eschalk improve logging
+- [x] eschalk create a helper imshow function
+- [x] eschalk Create on the QGIS part a color field as well as the class field
