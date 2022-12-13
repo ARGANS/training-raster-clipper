@@ -30,6 +30,8 @@ Below is a preview of the result you will get, classifying water, farmland and f
   - [Introduction to QGIS](#introduction-to-qgis)
     - [Download a Sentinel-2 product](#download-a-sentinel-2-product)
     - [Import a Sentinel-2 product into QGIS](#import-a-sentinel-2-product-into-qgis)
+      - [Files to import](#files-to-import)
+      - [Operations in QGIS](#operations-in-qgis)
     - [Draw geometric shapes and classify them](#draw-geometric-shapes-and-classify-them)
       - [Export the polygons to the GeoJSON format](#export-the-polygons-to-the-geojson-format)
   - [Python](#python)
@@ -97,17 +99,106 @@ We find again some information in the filename: `S2A` = Sentinel-2A, `MSIL2A`= M
 
 In the next part we will visualize it into QGIS.
 
+:information_source: If for some reason you cannot download the Sentinel-2 product, a set of the minimal files required to continue the tutorial is available under: `resources/solution/minimal_required_sentinel_files/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE/GRANULE/L2A_T31TCJ_A038658_20221116T105603/IMG_DATA/R60m`
+
 ### Import a Sentinel-2 product into QGIS
 
 [TODO eschalk]
+
+#### Files to import
+
+This first step is to import the interesting products from the Sentinel-2 `.SAFE` file.
+
+The rasters of interest will be located in this folder: `GRANULE/*/IMG_DATA/R60m`. You can notice that we will use a 60m resolution, the lowest one. But you can also import others if you want to.
+
+First, use the TCI file. It contains the Red, Blue and Green bands and can be visualized neatly into QGIS without further processing.
+
+Then, import the bands of interest separately: Red, Green, Blue, as well as the NIR band. We will import these files in the python code coming next.
+
+:information_source: The [Spatial Resolution](https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-2-msi/resolutions/spatial) page gives information on which files to choose:
+
+- RED = "B04"
+- GREEN = "B03"
+- BLUE = "B02"
+- NIR = "B8A"
+
+#### Operations in QGIS
+
+Create a new project in QGIS. For each of the files of interest, import them to a new Raster layer:
+
+Layer > Add Layer > Add Raster Layer. Select the source then click Add, closing the pop-up window.
+
+![picture 12](images/961e0e8cc014b9ce4d4025aaf0d72092344b42a632ea78daf520f79e157efcc5.png)
+
+![picture 13](images/637ce2ecd41e79d963a87b839ef1096c9be6d0dbc26730692510b3f176337144.png)
+
+You can change the default gray color palette to get a more visually interesting one. Right click on the Layer, choose Properties, then go to Symbology, then Band Rendering > Render type > Singleband pseudocolor. Then, under Color ramp, choose a more visually appealing one, eg Magma. Note that the TCI file contains all RGB bands and can be visualized instantly
+
+_Different Sentinel-2 files imported as Raster Layers_
 
 ### Draw geometric shapes and classify them
 
 For each class (Water, Farmland and Forest), a unique MultiPolygon will be generated. A MultiPolygons is, without surprise, a collection of Polygons. Note that it is unordered. For more information, please refer to the [MultiPolygon section of the GeoJSON specification](https://www.rfc-editor.org/rfc/rfc7946#section-3.1.7)
 
-[TODO eschalk]
+Layer > Create Layer > New Shapefile Layer.
+
+Choose the location where you want to save the file, choose Polygon as a geomtry type, and add 2 text fields:
+
+- class: will correspond to the feature covered by the polygon: WATER, FARMLAND, FOREST
+- color: will be used to assign neat colors to the classes (eg `#0000ff` for blue)
+
+![picture 15](images/00efd93eae6ea23e069fb222fd3a16e3eb301804d0207fdd40b7e0e1e566abcb.png)
+
+Edit the layer:
+
+![picture 16](images/f8269b26af42670b2179d79cad9541fc50636b7fa45dd269a52825ff90269898.png)
+
+_Add a Polygon covering a water surface, with WATER as a class and a Blue color_
+
+_Select the created polygon_
+
+![picture 20](images/62d6c71fb7f9820b1d9ece858d76505e4b588a681e42237354e07e78884b3d72.png)
+
+_Add Part tool will make you de facto create a to-be MultiPolygon for the JSON format_
+
+![picture 22](images/4ce2614fb0b14dd51fdfb96dbd278c73eefb0a5943a10e6bba8233df5b89d490.png)
+
+_A MultiPolygon with 2 parts, classified as WATER_
+
+Do the same for FARMLAND and FOREST.
+
+You can show the polygons in different colors according to their class (and color) by using:
+Polygons layer properties > Symbology > Choose Categorized
+
+Then, use `color` as a Value, and click on Classify.
+
+Random colors are assigned, but there is a smarter way so we can use the already defined colors from the color field. For each category: Double click to open the "Edit rule" menu, then select the "Simple Fill", Fill Color > Field type: string and select `color`:
+
+![picture 26](images/0bdea8086886ca35a2e99111516a41d355af8a190d6e5b22f547e3af8e960090.png)
+
+![picture 28](images/55f60420d6590ec1a690c6dbaebc73b82eb63de86e6c56d03181786ba407418c.png)
+
+_Valid values accepted by QGIS_
+
+![picture 25](images/0539a506650e623b7fbf8a77c0040e2177dab4a825054199fb0eaa325c4caf15.png)
+
+_Polygons are displayed using the hexadecimal color contained in their `color` field_
 
 #### Export the polygons to the GeoJSON format
+
+Right click on your polgygons layer > Export
+
+![picture 23](images/ff821c9533e2c183e75abb1797540f434b5bd715df6840c916b598b9a5f71fee.png)
+
+_Export under the GeoJSON format_
+
+:information_source: You can visualize the metadata under a table format by right clicking on the polygons layer > Open Attribute Table
+
+You can also use the button from the navigation bar:
+
+![picture 29](images/8095b735f64fb2ca9b67630730343d86000efb725495959f7a0806b6e55d9aa1.png)
+
+:information_source: If for some reason you cannot create the GeoJSON file, an example file is provided here: `resources/solution/polygons.geojson`
 
 ## Python
 
@@ -445,6 +536,10 @@ INFO:root:Congratulations, you reached the end of the tutorial!
 ## Back to QGIS
 
 ### Import the classification raster result
+
+As done before, add a Raster layer using the output `.tiff` file generated from the python script. In the Symbology menu, choose Paletted/Unique values, then classify. It is left to the reader to display the raster using the already defined colors from the GeoJSON file!
+
+![picture 30](images/f720e4418255c43d4680cea447b980faea67f48b44d63ce3bc7a04f5936baef5.png)
 
 ## Feedback
 
