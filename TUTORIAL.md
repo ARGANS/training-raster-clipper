@@ -545,6 +545,7 @@ If you have any questions or feedback regarding this tutorial, please contact me
 ## Improvements ideas
 
 - You can add another step to persist the model, so it can be computed once and then reused on other images, rather than recalculating it on each script execution
+- Use [`stackstac`](https://stackstac.readthedocs.io/en/latest/basic.html) to query the Sentinel-2 raster without having to manually download it via the Web UI. Sections of the raster also can be selected, rather than the whole.
 
 ## Tout Doux
 
