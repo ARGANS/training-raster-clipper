@@ -37,7 +37,7 @@ Below is a preview of the result you will get, classifying water, farmland and f
   - [Python](#python)
     - [Introduction](#introduction)
       - [Command line usage](#command-line-usage)
-      - [`launch.sh` script](#launchsh-script)
+      - [Launch script](#launch-script)
       - [Write your own code](#write-your-own-code)
       - [High-level process](#high-level-process)
     - [(1) Load a GeoJSON file with `geopanda`](#1-load-a-geojson-file-with-geopanda)
@@ -248,12 +248,13 @@ options:
                         Show figures at the end of the script execution. By default True
 ```
 
-#### `launch.sh` script
+#### Launch script
 
-You can use the `launch.sh` script and change it according to your needs so you don't have to type a long command, just:
+You can copy the `launch_template.sh`, replace the suffix `_template` with your username, and adapt it according to your needs so you don't have to type a long command, eg:
 
 ```bash
-./scripts/launch.sh
+echo $USERNAME
+./scripts/launch_${USERNAME}.sh
 ```
 
 - TUTORIAL_STEP: Corresponds to the step in the code we want to reach. Use this during the tutorial to make the script work until the intended step.
