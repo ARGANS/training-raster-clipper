@@ -23,7 +23,7 @@ CSV_OUTPUT_PATH='generated/classified_points.csv'
 
 RASTER_OUTPUT_PATH='generated/sklearn_raster.tiff'
 
-python ./src/training_raster_clipper/main.py \
+poetry run python ./src/training_raster_clipper/main.py \
     --raster_input_path $RASTER_INPUT_PATH \
     --polygons_input_path $POLYGONS_INPUT_PATH \
     --csv_output_path $CSV_OUTPUT_PATH \

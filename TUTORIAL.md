@@ -40,7 +40,7 @@ Below is a preview of the result you will get, classifying water, farmland and f
       - [Launch script](#launch-script)
       - [Write your own code](#write-your-own-code)
       - [High-level process](#high-level-process)
-    - [(1) Load a GeoJSON file with `geopanda`](#1-load-a-geojson-file-with-geopanda)
+    - [(1) Load a GeoJSON file with `geopandas`](#1-load-a-geojson-file-with-geopandas)
       - [Expected result](#expected-result)
     - [(2) Load a Sentinel-2 raster with `rioxarray`](#2-load-a-sentinel-2-raster-with-rioxarray)
       - [Locate the interesting bands](#locate-the-interesting-bands)
@@ -130,9 +130,9 @@ Layer > Add Layer > Add Raster Layer. Select the source then click Add, closing 
 
 ![picture 13](resources/images/637ce2ecd41e79d963a87b839ef1096c9be6d0dbc26730692510b3f176337144.png)
 
-You can change the default gray color palette to get a more visually interesting one. Right click on the Layer, choose Properties, then go to Symbology, then Band Rendering > Render type > Singleband pseudocolor. Then, under Color ramp, choose a more visually appealing one, eg Magma. Note that the TCI file contains all RGB bands and can be visualized instantly
-
 _Different Sentinel-2 files imported as Raster Layers_
+
+You can change the default gray color palette to get a more visually interesting one. Right click on the Layer, choose Properties, then go to Symbology, then Band Rendering > Render type > Singleband pseudocolor. Then, under Color ramp, choose a more visually appealing one, eg Magma. Note that the TCI file contains all RGB bands and can be visualized instantly
 
 ### Draw geometric shapes and classify them
 
@@ -275,15 +275,15 @@ Below is a diagram representing the data flow, from your two inputs (the Sentine
 
 ![picture 11](resources/images/c176acb489c87139b438be9f3e50d922a3f3ff9c186c224ccb6818dd6899a043.png)
 
-### (1) Load a GeoJSON file with `geopanda`
+### (1) Load a GeoJSON file with `geopandas`
 
 ```python
 def load_feature_polygons(input_path: Path) -> GeoDataFrame:
 ```
 
-In this step, we read from a GeoJSON file and load the data to a `GeoDataFrame` from `geopanda`. See [read_file](https://geopandas.org/en/stable/docs/reference/api/geopandas.read_file.html)
+In this step, we read from a GeoJSON file and load the data to a `GeoDataFrame` from `geopandas`. See [read_file](https://geopandas.org/en/stable/docs/reference/api/geopandas.read_file.html)
 
-The `geopanda` library adds geographical capabilities over `pandas`, such as a `geometry` column containing the description of the geographical feature. The rest of the columns are retrieved from the GeoJSON metadata.
+The `geopandas` library adds geographical capabilities over `pandas`, such as a `geometry` column containing the description of the geographical feature. The rest of the columns are retrieved from the GeoJSON metadata.
 
 Since the GeoJSON is in a `4326` EPSG format, we convert it to the one used by the Sentinel-2 raster: `32631`. See [to_crs](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.to_crs.html)
 
@@ -399,7 +399,7 @@ This step uses data from the two previous steps: the metadata from the multi-ban
 
 Please note that the mapping should only contain strictly positive integers, as `0` cells will be treated as "empty".
 
-The goal is to obtain a raster mask that will be later used to extract the reflectance data of pixels overlapping the classified polygons. This data can then be fed to a machine learning model to classify the rest of the pixels of the original Sentinel-2 data. The reflectance will be the "samples", and the classes the "features". Trained with a few samples, we want the model to be able to assign a "feature" to every pixel of the original Sentinel-2 image.
+The goal is to obtain a raster mask that will be later used to extract the reflectance data of pixels overlapping the classified polygons. This data can then be fed to a machine learning model to classify the rest of the pixels of the original Sentinel-2 data. The reflectances will be the "samples", and the classes the "features". Trained with a few samples, we want the model to be able to assign a "feature" to every pixel of the original Sentinel-2 image.
 
 #### Overview
 
@@ -514,7 +514,7 @@ We will now use the tools provided by `scikit-learn` to classify the rest of the
 
 :arrow_forward: Train the model using [`RandomForestClassifier.fit`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html#sklearn.ensemble.RandomForestClassifier.fit)
 
-:arrow_formard: Use the model to [`predict`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html#sklearn.ensemble.RandomForestClassifier.predict) the classes of the rest of the Sentinel-2 raster, and return the result. The prediction needs a list of elements, with each element being a list of reflectances in all bands. See `reshape` from numpy. Remainder: `rasters.values` gives access to the underlying numpy array.
+:arrow_forward: Use the model to [`predict`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html#sklearn.ensemble.RandomForestClassifier.predict) the classes of the rest of the Sentinel-2 raster, and return the result. The prediction needs a list of elements, with each element being a list of reflectances in all bands. See `reshape` from numpy. Remainder: `rasters.values` gives access to the underlying numpy array.
 
 #### Expected result
 
@@ -549,7 +549,7 @@ The main difficulty here is to reconstruct a new raster from the classification 
 
 :arrow_forward: Set the CRS based on the `crs_wkt` attribute of the `spatial_ref` dim of the original sentinel raster. For this, use [`write_crs`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray.rioxarray.XRasterBase.write_crs) from the `rio` accessor. This accessor is added on `xarray.DataArray`s by the `rioxarray` extension.
 
-:arrow_forward: Persist the `xarray.DataArray` to a raster, using the [to_raster](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray.raster_array.RasterArray.to_raster) from the `rio` accessor
+:arrow_forward: Persist the `xarray.DataArray` to a raster, using the [to_raster](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray.raster_array.RasterArray.to_raster) function from the `rio` accessor
 
 #### Expected result
 
