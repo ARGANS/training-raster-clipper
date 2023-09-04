@@ -1,0 +1,8 @@
+# Note: you have to drop the unzipped resources archive into this folder
+
+# .gitignore sample
+# Ignore all files in this dir...
+*
+
+# ... except for this one.
+!.gitignore
