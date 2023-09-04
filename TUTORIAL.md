@@ -21,7 +21,7 @@ The Python code will be broken down in independant smaller functions, for easier
 
 Below is a preview of the result you will get, classifying water, farmland and forest. You can notice noise due to clouds in the top right of the image:
 
-![picture 5](images/7b19ac4eff434e8a00969011b0f58374e67a81cb080c1cfd11f276925da1e2a3.png)
+![picture 5](resources/images/7b19ac4eff434e8a00969011b0f58374e67a81cb080c1cfd11f276925da1e2a3.png)
 
 ## Table of Contents
 
@@ -72,7 +72,7 @@ Go to https://scihub.copernicus.eu/dhus/#/home. Note that you will need to creat
 
 Use the selection tool too select a zone of interest. Here in this tutorial, we use a zone around Toulouse.
 
-![picture 2](images/0d39faad45ac3d55e4e74c50872a45cda41572faf4d809c050f773db8cfff46a.png)  
+![picture 2](resources/images/0d39faad45ac3d55e4e74c50872a45cda41572faf4d809c050f773db8cfff46a.png)  
 _Selection of the zone of interest_
 
 Fill in the search criteria :
@@ -85,12 +85,12 @@ Fill in the search criteria :
 - _Cloud Cover %_: `[0 TO 9.4]`. This helps filtering out images containing too many clouds, as they add unnecessary noise.
 - _Relative Orbit Number_ is left empty
 
-![picture 4](images/328f5e9bc29f1e87d047ba62300a06e5f2256470b15fb19c9bcd037bcc125d37.png)  
+![picture 4](resources/images/328f5e9bc29f1e87d047ba62300a06e5f2256470b15fb19c9bcd037bcc125d37.png)  
 _Search criteria_
 
 Click on the search button represented by a magnifier, and select a product covering the zone of interest. If you cannot find any, try first to increase the time window. You can then hit the download data.
 
-![picture 3](images/e9e9c265dfeb095d5cd07be46c75e99812a85f1680d9583b1e08815145342a47.png)  
+![picture 3](resources/images/e9e9c265dfeb095d5cd07be46c75e99812a85f1680d9583b1e08815145342a47.png)  
 _Search Results_
 
 Congratulations, you've downloaded your first Sentinel-2 product! In the screenshots, the downloaded file is an archived: `S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958`
@@ -126,9 +126,9 @@ Create a new project in QGIS. For each of the files of interest, import them to 
 
 Layer > Add Layer > Add Raster Layer. Select the source then click Add, closing the pop-up window.
 
-![picture 12](images/961e0e8cc014b9ce4d4025aaf0d72092344b42a632ea78daf520f79e157efcc5.png)
+![picture 12](resources/images/961e0e8cc014b9ce4d4025aaf0d72092344b42a632ea78daf520f79e157efcc5.png)
 
-![picture 13](images/637ce2ecd41e79d963a87b839ef1096c9be6d0dbc26730692510b3f176337144.png)
+![picture 13](resources/images/637ce2ecd41e79d963a87b839ef1096c9be6d0dbc26730692510b3f176337144.png)
 
 You can change the default gray color palette to get a more visually interesting one. Right click on the Layer, choose Properties, then go to Symbology, then Band Rendering > Render type > Singleband pseudocolor. Then, under Color ramp, choose a more visually appealing one, eg Magma. Note that the TCI file contains all RGB bands and can be visualized instantly
 
@@ -145,21 +145,21 @@ Choose the location where you want to save the file, choose Polygon as a geomtry
 - class: will correspond to the feature covered by the polygon: WATER, FARMLAND, FOREST
 - color: will be used to assign neat colors to the classes (eg `#0000ff` for blue)
 
-![picture 15](images/00efd93eae6ea23e069fb222fd3a16e3eb301804d0207fdd40b7e0e1e566abcb.png)
+![picture 15](resources/images/00efd93eae6ea23e069fb222fd3a16e3eb301804d0207fdd40b7e0e1e566abcb.png)
 
 Edit the layer:
 
-![picture 16](images/f8269b26af42670b2179d79cad9541fc50636b7fa45dd269a52825ff90269898.png)
+![picture 16](resources/images/f8269b26af42670b2179d79cad9541fc50636b7fa45dd269a52825ff90269898.png)
 
 _Add a Polygon covering a water surface, with WATER as a class and a Blue color_
 
 _Select the created polygon_
 
-![picture 20](images/62d6c71fb7f9820b1d9ece858d76505e4b588a681e42237354e07e78884b3d72.png)
+![picture 20](resources/images/62d6c71fb7f9820b1d9ece858d76505e4b588a681e42237354e07e78884b3d72.png)
 
 _Add Part tool will make you de facto create a to-be MultiPolygon for the JSON format_
 
-![picture 22](images/4ce2614fb0b14dd51fdfb96dbd278c73eefb0a5943a10e6bba8233df5b89d490.png)
+![picture 22](resources/images/4ce2614fb0b14dd51fdfb96dbd278c73eefb0a5943a10e6bba8233df5b89d490.png)
 
 _A MultiPolygon with 2 parts, classified as WATER_
 
@@ -172,13 +172,13 @@ Then, use `color` as a Value, and click on Classify.
 
 Random colors are assigned, but there is a smarter way so we can use the already defined colors from the color field. For each category: Double click to open the "Edit rule" menu, then select the "Simple Fill", Fill Color > Field type: string and select `color`:
 
-![picture 26](images/0bdea8086886ca35a2e99111516a41d355af8a190d6e5b22f547e3af8e960090.png)
+![picture 26](resources/images/0bdea8086886ca35a2e99111516a41d355af8a190d6e5b22f547e3af8e960090.png)
 
-![picture 28](images/55f60420d6590ec1a690c6dbaebc73b82eb63de86e6c56d03181786ba407418c.png)
+![picture 28](resources/images/55f60420d6590ec1a690c6dbaebc73b82eb63de86e6c56d03181786ba407418c.png)
 
 _Valid values accepted by QGIS_
 
-![picture 25](images/0539a506650e623b7fbf8a77c0040e2177dab4a825054199fb0eaa325c4caf15.png)
+![picture 25](resources/images/0539a506650e623b7fbf8a77c0040e2177dab4a825054199fb0eaa325c4caf15.png)
 
 _Polygons are displayed using the hexadecimal color contained in their `color` field_
 
@@ -186,7 +186,7 @@ _Polygons are displayed using the hexadecimal color contained in their `color` f
 
 Right click on your polgygons layer > Export
 
-![picture 23](images/ff821c9533e2c183e75abb1797540f434b5bd715df6840c916b598b9a5f71fee.png)
+![picture 23](resources/images/ff821c9533e2c183e75abb1797540f434b5bd715df6840c916b598b9a5f71fee.png)
 
 _Export under the GeoJSON format_
 
@@ -194,7 +194,7 @@ _Export under the GeoJSON format_
 
 You can also use the button from the navigation bar:
 
-![picture 29](images/8095b735f64fb2ca9b67630730343d86000efb725495959f7a0806b6e55d9aa1.png)
+![picture 29](resources/images/8095b735f64fb2ca9b67630730343d86000efb725495959f7a0806b6e55d9aa1.png)
 
 :information_source: If for some reason you cannot create the GeoJSON file, an example file is provided here: `resources/solution/polygons.geojson`
 
@@ -217,7 +217,35 @@ poetry install
 To see the different arguments the script accept, run the following command from the project's root:
 
 ```bash
-python ./training_raster_clipper/main.py -h
+python ./src/training_raster_clipper/main.py -h
+```
+
+Output:
+
+```
+usage: main.py [-h] [-p POLYGONS_INPUT_PATH] [-r RASTER_INPUT_PATH] [-o CSV_OUTPUT_PATH] [-s RASTER_OUTPUT_PATH] [-t TUTORIAL_STEP] [-v [VERBOSE]]
+              [-c [CHEAT]] [-f [FIGURES]]
+
+options:
+  -h, --help            show this help message and exit
+  -p POLYGONS_INPUT_PATH, --polygons_input_path POLYGONS_INPUT_PATH
+                        Classified polygons
+  -r RASTER_INPUT_PATH, --raster_input_path RASTER_INPUT_PATH
+                        RGB raster
+  -o CSV_OUTPUT_PATH, --csv_output_path CSV_OUTPUT_PATH
+                        Output path for CSV classified points
+  -s RASTER_OUTPUT_PATH, --raster_output_path RASTER_OUTPUT_PATH
+                        Output path for the raster resulting from sklearn
+  -t TUTORIAL_STEP, --tutorial_step TUTORIAL_STEP
+                        Execute code until the specified step. The step must be a value among ['NONE', 'LOAD_FEATURE_POLYGONS', 'LOAD_SENTINEL_DATA',
+                        'RASTERIZE_GEOJSON', 'PRODUCE_CLIPS', 'PERSIST_TO_CSV', 'CLASSIFY_SENTINEL_DATA', 'PERSIST_CLASSIFICATION_TO_RASTER', 'ALL', 'END'].
+                        If not specified, run all steps.
+  -v [VERBOSE], --verbose [VERBOSE]
+                        Verbose
+  -c [CHEAT], --cheat [CHEAT]
+                        Cheating: you can switch between the solution file or your own work, as they define the same functions.
+  -f [FIGURES], --figures [FIGURES]
+                        Show figures at the end of the script execution. By default True
 ```
 
 #### `launch.sh` script
@@ -225,7 +253,7 @@ python ./training_raster_clipper/main.py -h
 You can use the `launch.sh` script and change it according to your needs so you don't have to type a long command, just:
 
 ```bash
-./launch.sh
+./scripts/launch.sh
 ```
 
 - TUTORIAL_STEP: Corresponds to the step in the code we want to reach. Use this during the tutorial to make the script work until the intended step.
@@ -244,7 +272,7 @@ Before starting, you can have a glimpse of what the final result will look like 
 
 Below is a diagram representing the data flow, from your two inputs (the Sentinel-2 product and a GeoJSON file containing multipolygons), up to the final result: the classified Sentinel-2 product
 
-![picture 11](images/c176acb489c87139b438be9f3e50d922a3f3ff9c186c224ccb6818dd6899a043.png)
+![picture 11](resources/images/c176acb489c87139b438be9f3e50d922a3f3ff9c186c224ccb6818dd6899a043.png)
 
 ### (1) Load a GeoJSON file with `geopanda`
 
@@ -374,7 +402,7 @@ The goal is to obtain a raster mask that will be later used to extract the refle
 
 #### Overview
 
-![picture 9](images/62eca0e5f6d56e6875bc55e0ae774de006d479b03be976061a117e3a05c1992e.png)
+![picture 9](resources/images/62eca0e5f6d56e6875bc55e0ae774de006d479b03be976061a117e3a05c1992e.png)
 
 #### Rasterize the polygons
 
@@ -536,7 +564,7 @@ INFO:root:Congratulations, you reached the end of the tutorial!
 
 As done before, add a Raster layer using the output `.tiff` file generated from the python script. In the Symbology menu, choose Paletted/Unique values, then classify. It is left to the reader to display the raster using the already defined colors from the GeoJSON file!
 
-![picture 30](images/f720e4418255c43d4680cea447b980faea67f48b44d63ce3bc7a04f5936baef5.png)
+![picture 30](resources/images/f720e4418255c43d4680cea447b980faea67f48b44d63ce3bc7a04f5936baef5.png)
 
 ## Feedback
 
