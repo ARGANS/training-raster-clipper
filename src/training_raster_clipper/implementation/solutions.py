@@ -1,8 +1,4 @@
-import argparse
-import logging
-from enum import Enum
 from pathlib import Path
-from pprint import pformat
 from typing import Sequence, Tuple
 
 import geopandas as gpd
@@ -18,11 +14,12 @@ from geopandas.geodataframe import GeoDataFrame
 from sklearn.ensemble import RandomForestClassifier
 
 from training_raster_clipper.custom_types import (
+    BandNameType,
+    ClassificationResult,
     ClassifiedSamples,
-    Color,
     Mapping,
     PolygonMask,
-    Resolution,
+    ResolutionType,
 )
 
 
@@ -32,7 +29,8 @@ def load_feature_polygons(input_path: Path) -> GeoDataFrame:
 
 def load_sentinel_data(
     sentinel_product_location: Path,
-    resolution: Resolution = 60,
+    resolution: ResolutionType,
+    band_names: tuple[BandNameType, ...],
 ) -> xr.DataArray:
     """Loads sentinel product
 
@@ -46,25 +44,36 @@ def load_sentinel_data(
     """
     # Assumes that the glob will return only one subfolder
     band_file_paths = {
-        color: list(
+        band_name: list(
             sentinel_product_location.glob(
-                f"GRANULE/*/IMG_DATA/R{resolution}m/*_{color.value}_*"
+                f"GRANULE/*/IMG_DATA/R{resolution}m/*_{band_name}_*"
             )
         )[0]
-        for color in Color
+        for band_name in band_names
     }
 
-    bands: Sequence[xr.DataArray] = list(
-        rioxarray.open_rasterio(band_file_paths[color])
-        .astype(float)
-        .assign_coords(coords={"band": [color.value]})
-        for color in Color
+    rasters_type_unchecked = {
+        band_name: rioxarray.open_rasterio(band_file_paths[band_name])
+        for band_name in band_names
+    }
+
+    # Make the type system happy.
+    # `open_rasterio` returns an Union, leaving it to the user to check for returned content.
+    rasters = list(
+        raster.assign_coords(coords={"band": [band_name]})
+        for band_name, raster in rasters_type_unchecked.items()
+        if isinstance(raster, xr.DataArray)
     )
+    assert len(rasters) == len(rasters_type_unchecked)
 
-    xds: xr.DataArray = xr.concat(bands, "band")
+    nodata_value = 0
+    radio_add_offset = -1000.0
+    quantification_value = 10000.0
+    xda = xr.concat(rasters, "band")
+    xda = xda.where(xda != nodata_value, np.float32(np.nan))
 
-    # Normalization to a [0, 1] float, as Sentinel reflectances value are given in the [[0, 10000]] range
-    return xds / 10000.0
+    # Normalization to the [0, 1] float, as Sentinel reflectances value are given in the [[0, 10000]] range
+    return (xda + radio_add_offset) / quantification_value
 
 
 def rasterize_geojson(
@@ -141,11 +150,11 @@ def produce_clips(
         c: xds.values[:, burnt_polygons == c].T for c in mapping.values()
     }
 
-    # Refining: get a list of (R, G, B, feature class key) values
-    # Note: `c_` concatenated the provided columns
+    # Refining: get a list of (*band_names, feature class key) values
+    # Note: `c_` concatenates the provided columns
     return np.concatenate(
         [
-            np.c_[values, np.ones(len(values)) * feature_class]
+            np.c_[values, np.ones(len(values), dtype=np.float32) * feature_class]
             for feature_class, values in feature_class_to_rgb_values.items()
         ]
     )
@@ -154,10 +163,11 @@ def produce_clips(
 def persist_to_csv(
     classified_rgb_rows: ClassifiedSamples,
     csv_output_path: Path,
+    band_names: tuple[BandNameType, ...],
 ) -> None:
     df = pd.DataFrame(
         data=classified_rgb_rows,
-        columns=[*(color.value for color in Color), "feature_key"],
+        columns=[*(band_name for band_name in band_names), "feature_key"],
     )
     df.feature_key = df.feature_key.apply(int)
     df.to_csv(csv_output_path, index=False, sep=";")
@@ -165,7 +175,7 @@ def persist_to_csv(
 
 def classify_sentinel_data(
     rasters: xr.DataArray, classified_rgb_rows: ClassifiedSamples
-) -> np.ndarray:
+) -> ClassificationResult:
     model = RandomForestClassifier()
 
     # Remainder: Shape of the classified_rgb_rows array:
@@ -185,7 +195,7 @@ def classify_sentinel_data(
     # The first dimension is the bands
     # The reshape extract the list of all reflectance values
 
-    classes = model.predict(rasters.values.reshape(len(Color), -1).T).reshape(
+    classes = model.predict(rasters.values.reshape(rasters["band"].size, -1).T).reshape(
         rasters.shape[1:]
     )
 
@@ -193,7 +203,9 @@ def classify_sentinel_data(
 
 
 def persist_classification_to_raster(
-    raster_output_path: Path, rasters: xr.DataArray, classification_result: np.ndarray
+    raster_output_path: Path,
+    rasters: xr.DataArray,
+    classification_result: ClassificationResult,
 ) -> None:
     # Build a new raster from the result data array + the original sentinel raster
     data_array = xr.DataArray(

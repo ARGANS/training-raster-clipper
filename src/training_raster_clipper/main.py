@@ -46,7 +46,6 @@ class TutorialStep(Enum):
     PERSIST_TO_CSV = 500
     CLASSIFY_SENTINEL_DATA = 600
     PERSIST_CLASSIFICATION_TO_RASTER = 700
-    ALL = 1000
     END = 9999999
 
 
@@ -75,6 +74,9 @@ def main():
 
     info(args)
 
+    resolution = 60
+    band_names = ("B04", "B03", "B02", "B8A")
+
     # --
 
     current_step = TutorialStep.LOAD_FEATURE_POLYGONS
@@ -91,7 +93,7 @@ def main():
 
     current_step = TutorialStep.LOAD_SENTINEL_DATA
     interrupt_if_step_reached(tutorial_step, current_step)
-    rasters = interface.load_sentinel_data(raster_input_path)
+    rasters = interface.load_sentinel_data(raster_input_path, resolution, band_names)
     if verbose:
         info(rasters, "rasters")
     if show_plots:
@@ -125,7 +127,7 @@ def main():
 
     current_step = TutorialStep.PERSIST_TO_CSV
     interrupt_if_step_reached(tutorial_step, current_step)
-    interface.persist_to_csv(classified_rgb_rows, csv_output_path)
+    interface.persist_to_csv(classified_rgb_rows, csv_output_path, band_names)
     info(f"Written CSV output {csv_output_path}")
 
     # --
@@ -163,9 +165,12 @@ def main():
 def interrupt_if_step_reached(
     tutorial_step: TutorialStep, max_tutorial_step: TutorialStep
 ):
-    if tutorial_step.value < max_tutorial_step.value:
+    if (tutorial_step.value < max_tutorial_step.value) or (
+        max_tutorial_step == TutorialStep.END
+    ):
         plt.show()
-        exit(f"Exit after step {tutorial_step}")
+        info(f"Exit after step {tutorial_step}")
+        exit()
     else:
         info(f"Executing step: {max_tutorial_step}")
 
@@ -196,7 +201,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
             "Execute code until the specified step. The step must be a value among"
             f" {list(e.name for e in TutorialStep)}. If not specified, run all steps."
         ),
-        default=TutorialStep.ALL.name,
+        default=TutorialStep.END.name,
     )
     parser.add_argument(
         "-v",

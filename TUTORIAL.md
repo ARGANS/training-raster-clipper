@@ -37,7 +37,8 @@ Below is a preview of the result you will get, classifying water, farmland and f
   - [Python](#python)
     - [Introduction](#introduction)
       - [Command line usage](#command-line-usage)
-      - [Launch script](#launch-script)
+      - [Launch with VSCode (recommended)](#launch-with-vscode-recommended)
+      - [~~Launch script (not recommended)~~](#launch-script-not-recommended)
       - [Write your own code](#write-your-own-code)
       - [High-level process](#high-level-process)
     - [(1) Load a GeoJSON file with `geopandas`](#1-load-a-geojson-file-with-geopandas)
@@ -62,7 +63,7 @@ Below is a preview of the result you will get, classifying water, farmland and f
     - [Import the classification raster result](#import-the-classification-raster-result)
   - [Feedback](#feedback)
   - [Improvements ideas](#improvements-ideas)
-  - [Tout Doux](#tout-doux)
+  - [History](#history)
 
 ## Introduction to QGIS
 
@@ -248,7 +249,27 @@ options:
                         Show figures at the end of the script execution. By default True
 ```
 
-#### Launch script
+More details:
+
+- TUTORIAL_STEP: Corresponds to the step in the code we want to reach. Use this during the tutorial to make the script work until the intended step.
+- POLYGONS_INPUT_PATH: The GeoJSON polygons exported from QGIS
+- RASTER_INPUT_PATH: The location of the `.SAFE` file containing the Sentinel-2 product
+- CSV_OUTPUT_PATH: A CSV file of classified pixels of the Sentinel-2 product
+- RASTER_OUTPUT_PATH: A raster resulting from the `sklearn` classification
+
+#### Launch with VSCode (recommended)
+
+Open `.vscode/launch.json`. This file stores "Run and Debug" configurations, useful to integrate the run of the project with the IDE tooling such as the VSCode Debugger.
+
+Look for your username and update accordingly the command-line parameters. They are represented as a list of strings, in JSON.
+
+Then you can debug the project (add breakpoints, use the interactive debug console to evaluate expressions, etc.).
+
+![picture 0](docs/assets/images/d1d0eb3384351e6e083f94935ad94d5613f1e1e5f3b90b7639b75cd642041cd7.png)  
+![picture 1](docs/assets/images/deb6d2fb4fd9154c915c055729456c1fd94b9a8e3ba8ce3a2dcac6a1db578012.png)  
+Note that you can open the file and modify the configuration by clicking on the little cog on the right next the dropdown selector.
+
+#### ~~Launch script (not recommended)~~
 
 You can copy the `launch_template.sh`, replace the suffix `_template` with your username, and adapt it according to your needs so you don't have to type a long command, eg:
 
@@ -256,12 +277,6 @@ You can copy the `launch_template.sh`, replace the suffix `_template` with your 
 echo $USERNAME
 ./scripts/launch_${USERNAME}.sh
 ```
-
-- TUTORIAL_STEP: Corresponds to the step in the code we want to reach. Use this during the tutorial to make the script work until the intended step.
-- POLYGONS_INPUT_PATH: The GeoJSON polygons exported from QGIS
-- RASTER_INPUT_PATH: The location of the `.SAFE` file containing the Sentinel-2 product
-- CSV_OUTPUT_PATH: A CSV file of classified pixels of the Sentinel-2 product
-- RASTER_OUTPUT_PATH: A raster resulting from the `sklearn` classification
 
 #### Write your own code
 
@@ -306,7 +321,8 @@ INFO:root:     id   class                                           geometry
 ```python
 def load_sentinel_data(
     sentinel_product_location: Path,
-    resolution: Resolution = 60,
+    resolution: ResolutionType,
+    band_names: tuple[BandNameType, ...],
 ) -> xr.DataArray:
 ```
 
@@ -464,6 +480,7 @@ INFO:root:array([[0.107 , 0.1152, 0.1041, 0.1073, 1.    ],
 def persist_to_csv(
     classified_rgb_rows: ClassifiedSamples,
     csv_output_path: Path,
+    band_names: tuple[BandNameType, ...],
 ) -> None:
 ```
 
@@ -573,13 +590,14 @@ If you have any questions or feedback regarding this tutorial, please contact me
 
 ## Improvements ideas
 
+- In the step (1), the GeoJSON is converted to the raster's CRS, but this is hardcoded. A better way would be to retrieved the CRS directly from the Sentinel-2 raster. Note that this means the step (1) would now depend on (2). The CRS can be accessed via the `crs` attribute on the `rio` accessor of the raster. See [Accessing the CRS object](https://corteva.github.io/rioxarray/stable/getting_started/crs_management.html#Accessing-the-CRS-object)
 - You can add another step to persist the model, so it can be computed once and then reused on other images, rather than recalculating it on each script execution
 - Use [`stackstac`](https://stackstac.readthedocs.io/en/latest/basic.html) to query the Sentinel-2 raster without having to manually download it via the Web UI. Sections of the raster also can be selected, rather than the whole.
+- You can export the palette with python and auto import in QGIS
+- You can show the legend for classes
 
-## Tout Doux
+## History
 
-- [ ] eschalk export palette with python and auto import in QGIS
-- [ ] eschalk show the legend for classes
 - [x] eschalk add title to plot
 - [x] eschalk improve logging
 - [x] eschalk create a helper imshow function

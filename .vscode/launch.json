@@ -1,0 +1,85 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Training Raster Clipper - eschalk",
+            "type": "python",
+            "request": "launch",
+            "program": "./src/training_raster_clipper/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--raster_input_path",
+                "D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE",
+                "--polygons_input_path",
+                "resources/solution/polygons.geojson",
+                "--csv_output_path",
+                "generated/classified_points.csv",
+                "--raster_output_path",
+                "generated/sklearn_raster.tiff",
+                "--verbose",
+                "--figures",
+                "--cheat", // cheat mode, to use the solutions  
+                "--tutorial_step",
+                "END",
+                // "NONE",
+                // "LOAD_FEATURE_POLYGONS",
+                // "LOAD_SENTINEL_DATA",
+                // "RASTERIZE_GEOJSON",
+                // "PRODUCE_CLIPS",
+                // "PERSIST_TO_CSV",
+                // "CLASSIFY_SENTINEL_DATA",
+                // "PERSIST_CLASSIFICATION_TO_RASTER",
+            ],
+        },
+        {
+            "name": "Python: Training Raster Clipper - iatraoui",
+            "type": "python",
+            "request": "launch",
+            "program": "./src/training_raster_clipper/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--raster_input_path",
+                "TODO",
+                "--polygons_input_path",
+                "TODO",
+                "--csv_output_path",
+                "generated/classified_points.csv",
+                "--raster_output_path",
+                "generated/sklearn_raster.tiff",
+                "--verbose",
+                "--figures",
+                // "--cheat", // cheat mode, to use the solutions  
+                "--tutorial_step",
+                "END",
+            ],
+        },
+        {
+            "name": "Python: Training Raster Clipper - rskandrani",
+            "type": "python",
+            "request": "launch",
+            "program": "./src/training_raster_clipper/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--raster_input_path",
+                "TODO",
+                "--polygons_input_path",
+                "TODO",
+                "--csv_output_path",
+                "generated/classified_points.csv",
+                "--raster_output_path",
+                "generated/sklearn_raster.tiff",
+                "--verbose",
+                "--figures",
+                // "--cheat", // cheat mode, to use the solutions  
+                "--tutorial_step",
+                "END",
+            ],
+        },
+    ]
+}
