@@ -1,12 +1,7 @@
 from pathlib import Path
-from typing import Sequence, Tuple
 
 import geopandas as gpd
-import matplotlib.pyplot as plt
 import numpy as np
-import numpy.typing as npt
-import pandas as pd
-import rasterio
 import rioxarray
 import xarray as xr
 from affine import Affine
@@ -81,7 +76,7 @@ def load_sentinel_data(
 def rasterize_geojson(
     data_array: xr.DataArray,
     training_classes: GeoDataFrame,
-) -> Tuple[PolygonMask, FeatureClassNameToId]:
+) -> tuple[PolygonMask, FeatureClassNameToId]:
     """Burns a set of vectorial polygons to a raster.
 
     See https://gis.stackexchange.com/questions/316626/rasterio-features-rasterize

@@ -431,7 +431,7 @@ Coordinates:
 def rasterize_geojson(
     data_array: xr.DataArray,
     training_classes: GeoDataFrame,
-) -> Tuple[PolygonMask, Mapping]:
+) -> tuple[PolygonMask, Mapping]:
 ```
 
 This step uses data from the two previous steps: the metadata from the multi-band DataArray obtained with Sentinel-2 data, and the polygons loaded from the GeoJSON file into a GeoDataFrame.
