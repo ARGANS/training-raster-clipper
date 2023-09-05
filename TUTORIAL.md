@@ -344,7 +344,7 @@ See [Spatial Resolution](https://sentinels.copernicus.eu/web/sentinel/user-guide
 
 The glob pattern to locate the files from the `.SAFE` folder containing the Sentinel-2 product is the following: `GRANULE/*/IMG_DATA/R{resolution}m/*_{color.value}_*`
 
-:arrow_forward: Generate a color-indexed `Dict` of paths pointing to a raster for all colors in the `Color` enum
+:arrow_forward: Generate a color-indexed `Dict` of paths pointing to a raster for all band names.
 
 #### Use `rioxarray` to load the bands
 
@@ -352,7 +352,7 @@ The glob pattern to locate the files from the `.SAFE` folder containing the Sent
 
 Each DataArray should be enhanced with a new "band" coord, with the value being the one from the `Color` enum. See [`xarray.DataArray.assign_coords`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.assign_coords.html)
 
-:arrow_forward: Concatenate the rasters on a "band" dimension, using [xarray.concat](https://docs.xarray.dev/en/stable/generated/xarray.concat.html) for all colors in the `Color` enum. The final DataArray should have 3 coordinates: band, x, y.
+:arrow_forward: Concatenate the rasters on a "band" dimension, using [xarray.concat](https://docs.xarray.dev/en/stable/generated/xarray.concat.html) for all band names. The final DataArray should have 3 coordinates: band, x, y.
 
 #### Pre-processing on rasters
 
