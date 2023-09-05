@@ -1,38 +1,28 @@
-import argparse
-import logging
-from enum import Enum
 from pathlib import Path
-from pprint import pformat
 from typing import Tuple
 
-import geopandas as gpd
-import matplotlib.pyplot as plt
-import numpy as np
-import numpy.typing as npt
-import pandas as pd
-import rasterio
-import rioxarray
 import xarray as xr
-from affine import Affine
 from geopandas.geodataframe import GeoDataFrame
-from sklearn.ensemble import RandomForestClassifier
 
 from training_raster_clipper.custom_types import (
+    BandNameType,
+    ClassificationResult,
     ClassifiedSamples,
-    Color,
     Mapping,
     PolygonMask,
-    Resolution,
+    ResolutionType,
 )
 
 
 def load_feature_polygons(input_path: Path) -> GeoDataFrame:
     ...  # TODO
+    raise NotImplementedError
 
 
 def load_sentinel_data(
     sentinel_product_location: Path,
-    resolution: Resolution = 60,
+    resolution: ResolutionType,
+    band_names: tuple[BandNameType, ...],
 ) -> xr.DataArray:
     """Loads sentinel product
 
@@ -46,6 +36,7 @@ def load_sentinel_data(
     """
 
     ...  # TODO
+    raise NotImplementedError
 
 
 def rasterize_geojson(
@@ -66,6 +57,7 @@ def rasterize_geojson(
     """
 
     ...  # TODO
+    raise NotImplementedError
 
 
 def produce_clips(
@@ -82,22 +74,29 @@ def produce_clips(
     """
 
     ...  # TODO
+    raise NotImplementedError
 
 
 def persist_to_csv(
     classified_rgb_rows: ClassifiedSamples,
     csv_output_path: Path,
+    band_names: tuple[BandNameType, ...],
 ) -> None:
     ...  # TODO
+    raise NotImplementedError
 
 
 def classify_sentinel_data(
     rasters: xr.DataArray, classified_rgb_rows: ClassifiedSamples
-) -> np.ndarray:
+) -> ClassificationResult:
     ...  # TODO
+    raise NotImplementedError
 
 
 def persist_classification_to_raster(
-    raster_output_path: Path, rasters: xr.DataArray, classification_result: np.ndarray
+    raster_output_path: Path,
+    rasters: xr.DataArray,
+    classification_result: ClassificationResult,
 ) -> None:
     ...  # TODO
+    raise NotImplementedError
