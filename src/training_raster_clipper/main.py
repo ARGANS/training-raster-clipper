@@ -20,19 +20,12 @@ import logging
 from enum import Enum
 from pathlib import Path
 from pprint import pformat
-from typing import Dict, Literal, Optional, Sequence, Tuple
 
-import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
-import rasterio
-import rioxarray
 import xarray as xr
-from affine import Affine
 from geopandas.geodataframe import GeoDataFrame
-from sklearn.ensemble import RandomForestClassifier
 
 from training_raster_clipper.implementation import solutions, your_work
 
@@ -97,7 +90,7 @@ def main():
     if verbose:
         info(rasters, "rasters")
     if show_plots:
-        plot_data_array(
+        plot_rgb_data_array(
             rasters,
             f"({int(current_step.value/100)}: {current_step.name})",
         )
@@ -127,7 +120,7 @@ def main():
 
     current_step = TutorialStep.PERSIST_TO_CSV
     interrupt_if_step_reached(tutorial_step, current_step)
-    interface.persist_to_csv(classified_rgb_rows, csv_output_path, band_names)
+    interface.persist_to_csv(classified_rgb_rows, csv_output_path)
     info(f"Written CSV output {csv_output_path}")
 
     # --
@@ -150,7 +143,7 @@ def main():
     current_step = TutorialStep.PERSIST_CLASSIFICATION_TO_RASTER
     interrupt_if_step_reached(tutorial_step, current_step)
     interface.persist_classification_to_raster(
-        raster_output_path, rasters, classification_result
+        raster_output_path, classification_result
     )
     info(f"Written Classified Raster to {csv_output_path}")
 
@@ -168,7 +161,7 @@ def interrupt_if_step_reached(
     if (tutorial_step.value < max_tutorial_step.value) or (
         max_tutorial_step == TutorialStep.END
     ):
-        plt.show()
+        plt.show(block=True)
         info(f"Exit after step {tutorial_step}")
         exit()
     else:
@@ -264,10 +257,10 @@ def info(
             logging.info(pformat(object))
 
 
-def plot_data_array(xds: xr.DataArray, title: str):
+def plot_rgb_data_array(xds: xr.DataArray, title: str):
     plt.figure()
 
-    ax = xds[[0, 1, 2]].plot.imshow(vmax=np.percentile(xds, 99.5))
+    ax = xds.sel(band=["B04", "B03", "B02"]).plot.imshow(vmax=np.percentile(xds, 95))
     ax.axes.set_aspect("equal")
     ax.axes.set_title(title)
 
