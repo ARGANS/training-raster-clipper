@@ -12,6 +12,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
+                "--implementation",
+                "eschalk",
                 "--raster_input_path",
                 "D:/PROFILS/ESCHALK/DOWNLOADS/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958/S2A_MSIL2A_20221116T105321_N0400_R051_T31TCJ_20221116T170958.SAFE",
                 "--polygons_input_path",
@@ -22,7 +24,7 @@
                 "generated/sklearn_raster.tiff",
                 "--verbose",
                 "--figures",
-                "--cheat", // cheat mode, to use the solutions  
+                // "--cheat", // cheat mode, to use the solutions  
                 "--tutorial_step",
                 "END",
                 // "NONE",
@@ -43,6 +45,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
+                "--implementation",
+                "iatraoui",
                 "--raster_input_path",
                 "TODO",
                 "--polygons_input_path",
@@ -66,6 +70,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
+                "--implementation",
+                "rskandrani",
                 "--raster_input_path",
                 "TODO",
                 "--polygons_input_path",

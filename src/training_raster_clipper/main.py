@@ -27,7 +27,9 @@ import numpy.typing as npt
 import xarray as xr
 from geopandas.geodataframe import GeoDataFrame
 
-from training_raster_clipper.implementation import solutions, your_work
+from training_raster_clipper.implementation import eschalk, iatraoui, rskandrani
+
+CHEAT_MODE_IMPLEMENTATION = "eschalk"
 
 
 class TutorialStep(Enum):
@@ -54,8 +56,20 @@ def main():
     polygons_input_path = Path(args.polygons_input_path)
     csv_output_path = Path(args.csv_output_path)
     raster_output_path = Path(args.raster_output_path)
+    implementation = args.implementation
 
-    interface = solutions if args.cheat else your_work
+    implementations = {
+        "eschalk": eschalk,
+        "iatraoui": iatraoui,
+        "rskandrani": rskandrani,
+    }
+    assert implementation in implementations
+
+    interface = (
+        implementations[CHEAT_MODE_IMPLEMENTATION]
+        if args.cheat
+        else implementations[implementation]
+    )
 
     # Execute code until the desired tutorial step - if not provided, execute all as defined in the argumenty parser.
     try:
@@ -171,6 +185,12 @@ def interrupt_if_step_reached(
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "-i",
+        "--implementation",
+        type=str,
+        help="Python Module Name containing the implementation of the training to run",
+    )
+    parser.add_argument(
         "-p", "--polygons_input_path", type=str, help="Classified polygons"
     )
     parser.add_argument("-r", "--raster_input_path", type=str, help="RGB raster")
@@ -236,6 +256,9 @@ def parse_arguments(argument_parser: argparse.ArgumentParser):
     assert args.polygons_input_path, "Missing argument: polygons_input_path"
     assert args.csv_output_path, "Missing argument: csv_output_path"
     assert args.raster_output_path, "Missing argument: raster_output_path"
+
+    if not args.cheat:
+        assert args.implementation
 
     return args
 
