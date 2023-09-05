@@ -11,13 +11,14 @@ import rioxarray
 import xarray as xr
 from affine import Affine
 from geopandas.geodataframe import GeoDataFrame
+from rasterio.features import rasterize
 from sklearn.ensemble import RandomForestClassifier
 
 from training_raster_clipper.custom_types import (
     BandNameType,
     ClassificationResult,
     ClassifiedSamples,
-    Mapping,
+    FeatureClassNameToId,
     PolygonMask,
     ResolutionType,
 )
@@ -66,10 +67,11 @@ def load_sentinel_data(
     )
     assert len(rasters) == len(rasters_type_unchecked)
 
+    xda = xr.concat(rasters, "band")
+
     nodata_value = 0
     radio_add_offset = -1000.0
     quantification_value = 10000.0
-    xda = xr.concat(rasters, "band")
     xda = xda.where(xda != nodata_value, np.float32(np.nan))
 
     # Normalization to the [0, 1] float, as Sentinel reflectances value are given in the [[0, 10000]] range
@@ -79,7 +81,7 @@ def load_sentinel_data(
 def rasterize_geojson(
     data_array: xr.DataArray,
     training_classes: GeoDataFrame,
-) -> Tuple[PolygonMask, Mapping]:
+) -> Tuple[PolygonMask, FeatureClassNameToId]:
     """Burns a set of vectorial polygons to a raster.
 
     See https://gis.stackexchange.com/questions/316626/rasterio-features-rasterize
@@ -93,7 +95,7 @@ def rasterize_geojson(
                       0 where no polygon were found, and integers representing classes in order of occurence in the GeoDataFrame
     """
 
-    xds = data_array
+    xda = data_array
     gdf = training_classes
 
     # plt.imshow(xds[:-1].values)
@@ -101,20 +103,19 @@ def rasterize_geojson(
     # TODO eschalk add an option to plot or not the data
     # TODO eschalk do the plt show just before exiting the script
 
-    raster_transform = list(float(k) for k in xds.spatial_ref.GeoTransform.split())
+    raster_transform = list(float(k) for k in xda.spatial_ref.GeoTransform.split())
     raster_transform = Affine.from_gdal(*raster_transform)
 
-    # Remove the first value (band) and keep the dimensional ones
-    out_shape = xds.shape[1:]
+    # Get the shape of a band-slice. isel 0 means "take the first one"
+    # Drop true means we are not interested to keep the remaining band coord.
+    out_shape = xda.isel(band=0, drop=True).shape
 
     # Extract couples of geometry and class required to rasterize
     # shapes = [(row.geometry, row.class_key) for _, row in gdf.iterrows()]
     shapes = list(zip(gdf.geometry, gdf.index + 1))
-    mapping = dict(zip(gdf["class"], gdf.index + 1))
-    # print(mapping)
+    mapping = dict(zip(gdf["class"].values, gdf.index + 1))
 
-    # ndarray means n-dimensional array
-    burnt_polygons: PolygonMask = rasterio.features.rasterize(
+    burnt_polygons: PolygonMask = rasterize(
         shapes,
         out_shape=out_shape,
         fill=0,
@@ -122,13 +123,11 @@ def rasterize_geojson(
         dtype=np.uint8,
     )
 
-    # plt.imshow(burnt_polygons)
-    # plt.show()
     return burnt_polygons, mapping
 
 
 def produce_clips(
-    data_array: xr.DataArray, burnt_polygons: PolygonMask, mapping: Mapping
+    data_array: xr.DataArray, burnt_polygons: PolygonMask, mapping: FeatureClassNameToId
 ) -> ClassifiedSamples:
     """Extract RGB values covered by classified polygons
 
@@ -137,39 +136,59 @@ def produce_clips(
         burnt_polygons (PolygonMask): Rasterized classified multipolygons
 
     Returns:
-        _type_: A list of the RGB values contained in the data_array and their corresponding classes
+        A list of the RGB values contained in the data_array and their corresponding classes
     """
 
-    xds = data_array
+    xda = data_array
 
-    # The first colon allows to work on all bands.
-    # The remaining filtering is used to extract reflectance values (for all bands)
-    # of all 2D indices matching the predicate:
-    # the polygon mask matches the current class in the loop
-    feature_class_to_rgb_values = {
-        c: xds.values[:, burnt_polygons == c].T for c in mapping.values()
+    # Wrap the polygons' numpy array into an xarray DataArray fore easier work.
+    # Copy a band-slice of the reflectances and use the polygons data instead.
+    # The general pattern "isel coord = 0" means, we just want to extract a
+    # representative slice of the data cube.
+    burnt_polygons_xda = xda.isel(band=0, drop=True).copy(data=burnt_polygons)
+
+    # Extract reflectance values for all bands of all indices matching the predicate:
+    # "the polygon mask matches the current class in the loop".
+    # The stack method is used to "compress" the y and x dimension to a new 1-D z ones,
+    # allowing for selection using `sel`, avoiding the more heavy `where`.
+    # It avoids having to deal with the NaNs that `where` produce.
+    feature_id_to_reflectances = {
+        feature_id: (
+            xda.stack(z=("y", "x")).sel(
+                z=burnt_polygons_xda.stack(z=("y", "x")) == feature_id
+            )
+            # We won't need spatial information anymore
+            .drop_vars(("y", "x", "spatial_ref"))
+        )
+        for feature_id in mapping.values()
     }
 
-    # Refining: get a list of (*band_names, feature class key) values
-    # Note: `c_` concatenates the provided columns
-    return np.concatenate(
-        [
-            np.c_[values, np.ones(len(values), dtype=np.float32) * feature_class]
-            for feature_class, values in feature_class_to_rgb_values.items()
-        ]
+    # The dataset contains two variables:
+    # - The original reflectances, (band, z)-dependant
+    # - The feature class the pixels belong to, z-dependant
+    # This will be fed as an input to the model later.
+    classified_samples_dataset = xr.concat(
+        (
+            xr.Dataset(
+                {
+                    "reflectance": reflectances,
+                    "feature_id": xr.ones_like(reflectances.z) * feature_id,
+                }
+            )
+            for feature_id, reflectances in feature_id_to_reflectances.items()
+        ),
+        dim="z",
     )
+
+    return classified_samples_dataset
 
 
 def persist_to_csv(
     classified_rgb_rows: ClassifiedSamples,
     csv_output_path: Path,
-    band_names: tuple[BandNameType, ...],
 ) -> None:
-    df = pd.DataFrame(
-        data=classified_rgb_rows,
-        columns=[*(band_name for band_name in band_names), "feature_key"],
-    )
-    df.feature_key = df.feature_key.apply(int)
+    df = classified_rgb_rows["reflectance"].T.to_pandas()
+    df["feature_id"] = classified_rgb_rows["feature_id"].to_series()
     df.to_csv(csv_output_path, index=False, sep=";")
 
 
@@ -179,43 +198,25 @@ def classify_sentinel_data(
     model = RandomForestClassifier()
 
     # Remainder: Shape of the classified_rgb_rows array:
-    #
-    # B04;B03;B02;B8A;feature_key
+    # B04;B03;B02;B8A;feature_id
     # 0.107;0.1152;0.1041;0.1073;1
-    #
-    # classified_rgb_rows[:, : len(Color)] = B04;B03;B02;B8A
-    # classified_rgb_rows[:, -1] = feature_key
 
-    training_input_samples = classified_rgb_rows[:, :-1]
-    class_labels = classified_rgb_rows[:, -1].astype(int)
+    training_input_samples = classified_rgb_rows["reflectance"].T
+    class_labels = classified_rgb_rows["feature_id"]
 
     model.fit(training_input_samples, class_labels)
 
-    # rasters.values is the underlying numpy array
-    # The first dimension is the bands
-    # The reshape extract the list of all reflectance values
+    reference_2d_array = rasters.isel(band=0, drop=True)
 
-    classes = model.predict(rasters.values.reshape(rasters["band"].size, -1).T).reshape(
-        rasters.shape[1:]
+    classes = model.predict(rasters.stack(z=("y", "x")).T)
+
+    classes_xda = reference_2d_array.copy(
+        data=classes.reshape(reference_2d_array.shape)
     )
-
-    return classes
+    return classes_xda
 
 
 def persist_classification_to_raster(
-    raster_output_path: Path,
-    rasters: xr.DataArray,
-    classification_result: ClassificationResult,
+    raster_output_path: Path, classification_result: ClassificationResult
 ) -> None:
-    # Build a new raster from the result data array + the original sentinel raster
-    data_array = xr.DataArray(
-        classification_result,
-        coords={
-            "x": rasters.coords["x"],
-            "y": rasters.coords["y"],
-        },
-        dims=["y", "x"],
-    ).rio.write_crs(rasters.spatial_ref.crs_wkt)
-
-    # Persist
-    data_array.rio.to_raster(raster_output_path)
+    classification_result.rio.to_raster(raster_output_path)

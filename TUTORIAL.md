@@ -46,6 +46,7 @@ Below is a preview of the result you will get, classifying water, farmland and f
     - [(2) Load a Sentinel-2 raster with `rioxarray`](#2-load-a-sentinel-2-raster-with-rioxarray)
       - [Locate the interesting bands](#locate-the-interesting-bands)
       - [Use `rioxarray` to load the bands](#use-rioxarray-to-load-the-bands)
+      - [Pre-processing on rasters](#pre-processing-on-rasters)
       - [Expected result](#expected-result-1)
     - [(3) Rasterize the polygons](#3-rasterize-the-polygons)
       - [Overview](#overview)
@@ -330,20 +331,16 @@ In this tutorial, we will use a resolution of 60 meters, the minimal available o
 
 #### Locate the interesting bands
 
-You can see in the `custom_types/custom_types.py` file that the following enum is defined:
+You can see in the `main.py` file,
 
 ```python
-class ColorVisibleAndNir(Enum):
-    RED = "B04"
-    GREEN = "B03"
-    BLUE = "B02"
-    NIR = "B8A"
-
-
-Color = ColorVisibleAndNir
+    resolution = 60
+    band_names = ("B04", "B03", "B02", "B8A")
 ```
 
-:information_source: The values of this enum correspond to the band names as described in [Spatial Resolution](https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-2-msi/resolutions/spatial). The noun "Color" is here used more broadly, as it also includes the NIR (Near Infrared). A more correct name would be "Band".
+The band names correspond respectively to Red, Green, Blue and Narrow NIR.
+
+See [Spatial Resolution](https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-2-msi/resolutions/spatial).
 
 The glob pattern to locate the files from the `.SAFE` folder containing the Sentinel-2 product is the following: `GRANULE/*/IMG_DATA/R{resolution}m/*_{color.value}_*`
 
@@ -353,11 +350,37 @@ The glob pattern to locate the files from the `.SAFE` folder containing the Sent
 
 :arrow_forward: Generate a list of [`xarray.DataArray`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html) Use [`rioxarray.open_rasterio`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-open-rasterio).
 
-Each DataArray should be cast to float, as the Sentinel values are integer-encoded, [ranging from 0 to 10000](https://docs.sentinel-hub.com/api/latest/data/sentinel-2-l2a/#harmonize-values). They actually represent a reflectance value from 0 to 1, so to normalize, the values in the DataArray must be divided by 10000.
-
 Each DataArray should be enhanced with a new "band" coord, with the value being the one from the `Color` enum. See [`xarray.DataArray.assign_coords`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.assign_coords.html)
 
-:arrow_forward: Concatenate the bands on a "band" dimension, using [xarray.concat](https://docs.xarray.dev/en/stable/generated/xarray.concat.html) for all colors in the `Color` enum. The final DataArray should have 3 coordinates: band, x, y.
+:arrow_forward: Concatenate the rasters on a "band" dimension, using [xarray.concat](https://docs.xarray.dev/en/stable/generated/xarray.concat.html) for all colors in the `Color` enum. The final DataArray should have 3 coordinates: band, x, y.
+
+#### Pre-processing on rasters
+
+The Sentinel-2 reflectance values are integer-encoded, ranging from `0` to `10000`. They actually represent a reflectance value from 0 to 1, so this raw data must be pre-processed to obtain these values.
+
+The first step after the DataArrays have been loaded is to replace the special value `0` by a NaN.
+
+See https://docs.xarray.dev/en/stable/generated/xarray.where.html#xarray-where
+
+Then, the reflectances should be normalized to a `[[0, 1]]` range with the following formula:
+
+```
+ρ_normalized = ρ + RADIO_ADD_OFFSET / QUANTIFICATION_VALUE
+```
+
+where ρ is the raster data containing reflectances, `RADIO_ADD_OFFSET = -1000` and `QUANTIFICATION_VALUE = 10000`
+
+> 6. Provision of negative radiometric values (implementing an offset):A radiometric offset will be added up to the image reflectance at Level-1C. The dynamic range will be shifted by a band-dependent constant, i.e. RADIO_ADD_OFFSET. From the user’s point of view, the L1C Top of Atmosphere (TOA) reflectance (L1C_TOA) shall be retrieved from the output radiometry as follows:
+>
+>    Digital Number DN=0 will remain the “NO_DATA” value
+>
+>    For a given DN in [1;215-1], the L1C TOA reflectance value will be: L1C_TOAi = (L1C_DNi + RADIO_ADD_OFFSETi) / > QUANTIFICATION_VALUEi
+
+_Source: [Processing Baseline](https://sentinels.copernicus.eu/en/web/sentinel/technical-guides/sentinel-2-msi/processing-baseline)_
+
+Ensure the resulting DataArray is a `np.float32`
+
+:arrow_forward: Normalize reflectances
 
 #### Expected result
 
@@ -480,7 +503,6 @@ INFO:root:array([[0.107 , 0.1152, 0.1041, 0.1073, 1.    ],
 def persist_to_csv(
     classified_rgb_rows: ClassifiedSamples,
     csv_output_path: Path,
-    band_names: tuple[BandNameType, ...],
 ) -> None:
 ```
 
@@ -556,7 +578,7 @@ _Note: Removed because the NIR band is included from the start_
 
 ```python
 def persist_classification_to_raster(
-    raster_output_path: Path, rasters: xr.DataArray, classification_result: np.ndarray
+    raster_output_path: Path, classification_result: ClassificationResult
 ) -> None:
 ```
 

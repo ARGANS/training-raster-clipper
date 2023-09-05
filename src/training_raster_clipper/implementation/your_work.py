@@ -8,7 +8,7 @@ from training_raster_clipper.custom_types import (
     BandNameType,
     ClassificationResult,
     ClassifiedSamples,
-    Mapping,
+    FeatureClassNameToId,
     PolygonMask,
     ResolutionType,
 )
@@ -42,7 +42,7 @@ def load_sentinel_data(
 def rasterize_geojson(
     data_array: xr.DataArray,
     training_classes: GeoDataFrame,
-) -> Tuple[PolygonMask, Mapping]:
+) -> Tuple[PolygonMask, FeatureClassNameToId]:
     """Burns a set of vectorial polygons to a raster.
 
     See https://gis.stackexchange.com/questions/316626/rasterio-features-rasterize
@@ -61,7 +61,7 @@ def rasterize_geojson(
 
 
 def produce_clips(
-    data_array: xr.DataArray, burnt_polygons: PolygonMask, mapping: Mapping
+    data_array: xr.DataArray, burnt_polygons: PolygonMask, mapping: FeatureClassNameToId
 ) -> ClassifiedSamples:
     """Extract RGB values covered by classified polygons
 
@@ -80,7 +80,6 @@ def produce_clips(
 def persist_to_csv(
     classified_rgb_rows: ClassifiedSamples,
     csv_output_path: Path,
-    band_names: tuple[BandNameType, ...],
 ) -> None:
     ...  # TODO
     raise NotImplementedError
@@ -94,9 +93,7 @@ def classify_sentinel_data(
 
 
 def persist_classification_to_raster(
-    raster_output_path: Path,
-    rasters: xr.DataArray,
-    classification_result: ClassificationResult,
+    raster_output_path: Path, classification_result: ClassificationResult
 ) -> None:
     ...  # TODO
     raise NotImplementedError

@@ -127,7 +127,7 @@ def main():
 
     current_step = TutorialStep.PERSIST_TO_CSV
     interrupt_if_step_reached(tutorial_step, current_step)
-    interface.persist_to_csv(classified_rgb_rows, csv_output_path, band_names)
+    interface.persist_to_csv(classified_rgb_rows, csv_output_path)
     info(f"Written CSV output {csv_output_path}")
 
     # --
@@ -168,7 +168,7 @@ def interrupt_if_step_reached(
     if (tutorial_step.value < max_tutorial_step.value) or (
         max_tutorial_step == TutorialStep.END
     ):
-        plt.show()
+        plt.show(block=True)
         info(f"Exit after step {tutorial_step}")
         exit()
     else:

@@ -1,16 +1,16 @@
-from typing import Literal, Sequence
+from typing import Literal
 
 import numpy as np
 import numpy.typing as npt
+import xarray as xr
 
 # Maps a feature class name to an integer.
-Mapping = dict[str, int]
+FeatureClassNameToId = dict[str, int]
 
-# Rows of (*bands, class)
-ClassifiedSamples = npt.NDArray[np.float32]
+ClassifiedSamples = xr.Dataset
 
 # 2-D array of classes
-ClassificationResult = npt.NDArray[np.int32]
+ClassificationResult = xr.DataArray
 
 # Sparse 2D-matrix containing classes from polygons
 PolygonMask = npt.NDArray[np.uint8]
