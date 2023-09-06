@@ -2,6 +2,7 @@ from pathlib import Path
 
 import xarray as xr
 from geopandas.geodataframe import GeoDataFrame
+from geopandas import read_file
 
 from training_raster_clipper.custom_types import (
     BandNameType,
@@ -14,8 +15,11 @@ from training_raster_clipper.custom_types import (
 
 
 def load_feature_polygons(input_path: Path) -> GeoDataFrame:
-    ...  # TODO
-    raise NotImplementedError
+    # ...  # TODO
+    gdf = read_file(input_path)
+    gdf = gdf.to_crs(32631)
+    return gdf
+    # raise NotImplementedError
 
 
 def load_sentinel_data(
