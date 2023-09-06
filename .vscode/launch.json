@@ -48,9 +48,10 @@
                 "--implementation",
                 "iatraoui",
                 "--raster_input_path",
-                "TODO",
+                "D:/Profils/iatraoui/Desktop/Project/S2A_MSIL2A_20230823T104631_N0509_R051_T31TCJ_20230823T170355.SAFE",
                 "--polygons_input_path",
-                "TODO",
+                "resources/solution/polygons.geojson",
+                // "TODO",
                 "--csv_output_path",
                 "generated/classified_points.csv",
                 "--raster_output_path",
@@ -59,7 +60,8 @@
                 "--figures",
                 // "--cheat", // cheat mode, to use the solutions  
                 "--tutorial_step",
-                "END",
+                "LOAD_FEATURE_POLYGONS",
+                // "END",
             ],
         },
         {
