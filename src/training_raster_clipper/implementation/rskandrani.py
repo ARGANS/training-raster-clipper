@@ -4,7 +4,6 @@ import xarray as xr
 from geopandas.geodataframe import GeoDataFrame
 from rioxarray import open_rasterio
 from geopandas import read_file
-import os
 import numpy as np
 from training_raster_clipper.custom_types import (
     BandNameType,
@@ -57,12 +56,14 @@ def load_sentinel_data(
         list_dataarray.append(raster.assign_coords({"band": [band_name]}))
 
     rasters_concat = xr.concat(list_dataarray, dim="band")
-    print(type(rasters_concat))
-    result = xr.where(
-        rasters_concat == 0,
+
+    result = rasters_concat.where(
+        rasters_concat != 0,
         np.float32(np.NaN),
-        (rasters_concat - RADIO_ADD_OFFSET) / QUANTIFICATION_VALUE,
     )
+
+    result = (result - RADIO_ADD_OFFSET) / QUANTIFICATION_VALUE
+
     return result
 
 
