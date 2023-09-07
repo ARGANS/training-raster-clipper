@@ -342,15 +342,15 @@ The band names correspond respectively to Red, Green, Blue and Narrow NIR.
 
 See [Spatial Resolution](https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-2-msi/resolutions/spatial).
 
-The glob pattern to locate the files from the `.SAFE` folder containing the Sentinel-2 product is the following: `GRANULE/*/IMG_DATA/R{resolution}m/*_{color.value}_*`
+The glob pattern to locate the files from the `.SAFE` folder containing the Sentinel-2 product is the following: `GRANULE/*/IMG_DATA/R{resolution}m/*_{band_name}_*`
 
-:arrow_forward: Generate a color-indexed `Dict` of paths pointing to a raster for all band names.
+:arrow_forward: Generate a band name-indexed `Dict` of paths pointing to a raster for all band names.
 
 #### Use `rioxarray` to load the bands
 
 :arrow_forward: Generate a list of [`xarray.DataArray`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html) Use [`rioxarray.open_rasterio`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-open-rasterio).
 
-Each DataArray should be enhanced with a new "band" coord, with the value being the one from the `Color` enum. See [`xarray.DataArray.assign_coords`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.assign_coords.html)
+Each DataArray should be enhanced with a new "band" coord, with the value being the one from the band names. See [`xarray.DataArray.assign_coords`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.assign_coords.html)
 
 :arrow_forward: Concatenate the rasters on a "band" dimension, using [xarray.concat](https://docs.xarray.dev/en/stable/generated/xarray.concat.html) for all band names. The final DataArray should have 3 coordinates: band, x, y.
 
@@ -506,7 +506,7 @@ def persist_to_csv(
 ) -> None:
 ```
 
-:arrow_forward: With the help of a pandas DataFrame, output the previously obtained numpy array of colors and class to a CSV File. Columns must be all the Colors, followed by the integer representing the class of the pixel.
+:arrow_forward: With the help of a pandas DataFrame, output the previously obtained numpy array of band names and class to a CSV File. Columns must be all the band names, followed by the integer representing the class of the pixel.
 
 #### Expected result
 
