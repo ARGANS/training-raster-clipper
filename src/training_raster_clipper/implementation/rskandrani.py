@@ -56,8 +56,6 @@ def load_sentinel_data(
 
         list_dataarray.append(raster.assign_coords({"band": [band_name]}))
 
-    print(type(list_dataarray[0]))
-
     rasters_concat = xr.concat(list_dataarray, dim="band")
     print(type(rasters_concat))
     result = xr.where(
