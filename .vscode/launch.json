@@ -84,7 +84,7 @@
                 "--figures",
                 // "--cheat", // cheat mode, to use the solutions  
                 "--tutorial_step",
-                "END",
+                "LOAD_SENTINEL_DATA",
             ],
         },
     ]
