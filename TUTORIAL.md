@@ -43,23 +43,33 @@ Below is a preview of the result you will get, classifying water, farmland and f
       - [High-level process](#high-level-process)
     - [(1) Load a GeoJSON file with `geopandas`](#1-load-a-geojson-file-with-geopandas)
       - [Expected result](#expected-result)
+        - [Logs](#logs)
+        - [Plot](#plot)
     - [(2) Load a Sentinel-2 raster with `rioxarray`](#2-load-a-sentinel-2-raster-with-rioxarray)
       - [Locate the interesting bands](#locate-the-interesting-bands)
       - [Use `rioxarray` to load the bands](#use-rioxarray-to-load-the-bands)
       - [Pre-processing on rasters](#pre-processing-on-rasters)
       - [Expected result](#expected-result-1)
+        - [Logs](#logs-1)
+        - [Plot](#plot-1)
     - [(3) Rasterize the polygons](#3-rasterize-the-polygons)
       - [Overview](#overview)
       - [Rasterize the polygons](#rasterize-the-polygons)
       - [Expected result](#expected-result-2)
+        - [Logs](#logs-2)
+        - [Plot](#plot-2)
     - [(4) Intersect the Sentinel-2 raster with polygons](#4-intersect-the-sentinel-2-raster-with-polygons)
       - [Expected result](#expected-result-3)
     - [(5) Persist the intersection to a CSV](#5-persist-the-intersection-to-a-csv)
       - [Expected result](#expected-result-4)
+        - [Logs](#logs-3)
     - [(6) Train a machine learning model](#6-train-a-machine-learning-model)
       - [Expected result](#expected-result-5)
+        - [Logs](#logs-4)
+        - [Plot](#plot-3)
     - [(7) Export the classification raster result](#7-export-the-classification-raster-result)
       - [Expected result](#expected-result-6)
+        - [Logs](#logs-5)
   - [Back to QGIS](#back-to-qgis)
     - [Import the classification raster result](#import-the-classification-raster-result)
   - [Feedback](#feedback)
@@ -307,15 +317,22 @@ Since the GeoJSON is in a `4326` EPSG format, we convert it to the one used by t
 
 #### Expected result
 
+##### Logs
+
 ```log
 INFO:root:Executing step: TutorialStep.LOAD_FEATURE_POLYGONS
-INFO:root:     id   class                                           geometry
-0  None   WATER  MULTIPOLYGON (((366356.635 4843608.195, 366742...
-1  None  FOREST  MULTIPOLYGON (((355918.751 4834466.232, 357404...
-2  None    FARM  MULTIPOLYGON (((365718.363 4843753.544, 365876...
+INFO:root:polygons:
+   id   class    color                                           geometry
+0 NaN   WATER  #0094FF  MULTIPOLYGON (((366356.635 4843608.195, 366742...
+1 NaN  FOREST  #007F46  MULTIPOLYGON (((355918.751 4834466.232, 357404...
+2 NaN    FARM  #94FF00  MULTIPOLYGON (((365718.363 4843753.544, 365876...
 ```
 
 :eyes: We can see again our 3 MultiPolygons created from QGIS, each of them corresponding to a specific class
+
+##### Plot
+
+![picture 6](docs/assets/images/23b6c092ebb3d2a35325ab9bcc2ead45cd8001aae8383985ef0336a249192721.png)
 
 ### (2) Load a Sentinel-2 raster with `rioxarray`
 
@@ -342,15 +359,15 @@ The band names correspond respectively to Red, Green, Blue and Narrow NIR.
 
 See [Spatial Resolution](https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-2-msi/resolutions/spatial).
 
-The glob pattern to locate the files from the `.SAFE` folder containing the Sentinel-2 product is the following: `GRANULE/*/IMG_DATA/R{resolution}m/*_{color.value}_*`
+The glob pattern to locate the files from the `.SAFE` folder containing the Sentinel-2 product is the following: `GRANULE/*/IMG_DATA/R{resolution}m/*_{band_name}_*`
 
-:arrow_forward: Generate a color-indexed `Dict` of paths pointing to a raster for all band names.
+:arrow_forward: Generate a band name-indexed `Dict` of paths pointing to a raster for all band names.
 
 #### Use `rioxarray` to load the bands
 
 :arrow_forward: Generate a list of [`xarray.DataArray`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html) Use [`rioxarray.open_rasterio`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-open-rasterio).
 
-Each DataArray should be enhanced with a new "band" coord, with the value being the one from the `Color` enum. See [`xarray.DataArray.assign_coords`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.assign_coords.html)
+Each DataArray should be enhanced with a new "band" coord, with the value being the one from the band names. See [`xarray.DataArray.assign_coords`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.assign_coords.html)
 
 :arrow_forward: Concatenate the rasters on a "band" dimension, using [xarray.concat](https://docs.xarray.dev/en/stable/generated/xarray.concat.html) for all band names. The final DataArray should have 3 coordinates: band, x, y.
 
@@ -384,46 +401,54 @@ Ensure the resulting DataArray is a `np.float32`
 
 #### Expected result
 
+##### Logs
+
 ```log
 INFO:root:Executing step: TutorialStep.LOAD_SENTINEL_DATA
-INFO:root:<xarray.DataArray (band: 4, y: 1830, x: 1830)>
-array([[[0.172 , 0.1677, 0.1614, ..., 0.1329, 0.1313, 0.1291],
-        [0.171 , 0.1666, 0.1674, ..., 0.1315, 0.1296, 0.1329],
-        [0.1797, 0.1531, 0.1551, ..., 0.1305, 0.1296, 0.1344],
+INFO:root:rasters:
+<xarray.DataArray (band: 4, y: 1830, x: 1830)>
+array([[[0.072 , 0.0677, 0.0614, ..., 0.0329, 0.0313, 0.0291],
+        [0.071 , 0.0666, 0.0674, ..., 0.0315, 0.0296, 0.0329],
+        [0.0797, 0.0531, 0.0551, ..., 0.0305, 0.0296, 0.0344],
         ...,
-        [0.1353, 0.1321, 0.1216, ..., 0.1713, 0.1412, 0.1603],
-        [0.116 , 0.1325, 0.1314, ..., 0.2727, 0.263 , 0.208 ],
-        [0.1248, 0.1357, 0.1402, ..., 0.2427, 0.233 , 0.248 ]],
+        [0.0353, 0.0321, 0.0216, ..., 0.0713, 0.0412, 0.0603],
+        [0.016 , 0.0325, 0.0314, ..., 0.1727, 0.163 , 0.108 ],
+        [0.0248, 0.0357, 0.0402, ..., 0.1427, 0.133 , 0.148 ]],
 
-       [[0.1611, 0.1578, 0.15  , ..., 0.1461, 0.1437, 0.1419],
-        [0.1606, 0.1509, 0.148 , ..., 0.144 , 0.1402, 0.144 ],
-        [0.1603, 0.1463, 0.1462, ..., 0.1426, 0.142 , 0.1465],
+       [[0.0611, 0.0578, 0.05  , ..., 0.0461, 0.0437, 0.0419],
+        [0.0606, 0.0509, 0.048 , ..., 0.044 , 0.0402, 0.044 ],
+        [0.0603, 0.0463, 0.0462, ..., 0.0426, 0.042 , 0.0465],
         ...,
-        [0.139 , 0.143 , 0.1325, ..., 0.1606, 0.1412, 0.1514],
-        [0.1243, 0.1442, 0.1474, ..., 0.2279, 0.2241, 0.1886],
-        [0.1347, 0.1467, 0.1508, ..., 0.2062, 0.1989, 0.2136]],
+        [0.039 , 0.043 , 0.0325, ..., 0.0606, 0.0412, 0.0514],
+        [0.0243, 0.0442, 0.0474, ..., 0.1279, 0.1241, 0.0886],
+        [0.0347, 0.0467, 0.0508, ..., 0.1062, 0.0989, 0.1136]],
 
-       [[0.1347, 0.1323, 0.1276, ..., 0.1134, 0.1132, 0.1132],
-        [0.1341, 0.1304, 0.1288, ..., 0.1135, 0.1129, 0.1146],
-        [0.1349, 0.1231, 0.1257, ..., 0.1129, 0.1131, 0.1165],
+       [[0.0347, 0.0323, 0.0276, ..., 0.0134, 0.0132, 0.0132],
+        [0.0341, 0.0304, 0.0288, ..., 0.0135, 0.0129, 0.0146],
+        [0.0349, 0.0231, 0.0257, ..., 0.0129, 0.0131, 0.0165],
         ...,
-        [0.1115, 0.1115, 0.1037, ..., 0.1236, 0.1136, 0.1218],
-        [0.1035, 0.1131, 0.1105, ..., 0.16  , 0.1596, 0.145 ],
-        [0.1076, 0.1156, 0.1158, ..., 0.1488, 0.1453, 0.1577]],
+        [0.0115, 0.0115, 0.0037, ..., 0.0236, 0.0136, 0.0218],
+        [0.0035, 0.0131, 0.0105, ..., 0.06  , 0.0596, 0.045 ],
+        [0.0076, 0.0156, 0.0158, ..., 0.0488, 0.0453, 0.0577]],
 
-       [[0.2769, 0.277 , 0.2587, ..., 0.3713, 0.3631, 0.3439],
-        [0.276 , 0.2345, 0.2191, ..., 0.3511, 0.3403, 0.3547],
-        [0.2519, 0.2613, 0.2484, ..., 0.3485, 0.3559, 0.3687],
+       [[0.1769, 0.177 , 0.1587, ..., 0.2713, 0.2631, 0.2439],
+        [0.176 , 0.1345, 0.1191, ..., 0.2511, 0.2403, 0.2547],
+        [0.1519, 0.1613, 0.1484, ..., 0.2485, 0.2559, 0.2687],
         ...,
-        [0.3279, 0.3605, 0.3403, ..., 0.3368, 0.3274, 0.3498],
-        [0.2775, 0.4015, 0.4392, ..., 0.3312, 0.3428, 0.3548],
-        [0.4155, 0.4093, 0.4304, ..., 0.2904, 0.2792, 0.2992]]])
+        [0.2279, 0.2605, 0.2403, ..., 0.2368, 0.2274, 0.2498],
+        [0.1775, 0.3015, 0.3392, ..., 0.2312, 0.2428, 0.2548],
+        [0.3155, 0.3093, 0.3304, ..., 0.1904, 0.1792, 0.1992]]],
+      dtype=float32)
 Coordinates:
   * band         (band) <U3 'B04' 'B03' 'B02' 'B8A'
   * x            (x) float64 3e+05 3.001e+05 3.002e+05 ... 4.097e+05 4.098e+05
   * y            (y) float64 4.9e+06 4.9e+06 4.9e+06 ... 4.79e+06 4.79e+06
     spatial_ref  int32 0
 ```
+
+##### Plot
+
+![picture 5](docs/assets/images/13f8d99201cd5facebdcda48033de6e233acdb393008a02ee5265f1f81f5dd2d.png)
 
 ### (3) Rasterize the polygons
 
@@ -460,17 +485,25 @@ The goal is to obtain a raster mask that will be later used to extract the refle
 
 #### Expected result
 
+##### Logs
+
 ```log
 INFO:root:Executing step: TutorialStep.RASTERIZE_GEOJSON
-INFO:root:array([[0, 0, 0, ..., 0, 0, 0],
+INFO:root:burnt_polygons:
+array([[0, 0, 0, ..., 0, 0, 0],
        [0, 0, 0, ..., 0, 0, 0],
        [0, 0, 0, ..., 0, 0, 0],
        ...,
        [0, 0, 0, ..., 0, 0, 0],
        [0, 0, 0, ..., 0, 0, 0],
        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8)
-INFO:root:{'FARM': 3, 'FOREST': 2, 'WATER': 1}
+INFO:root:mapping:
+{'FARM': 3, 'FOREST': 2, 'WATER': 1}
 ```
+
+##### Plot
+
+![picture 4](docs/assets/images/2ee2066856ebeefab386cfd54390ecd9327db09b74d1591c8e281388e48b455b.png)
 
 ### (4) Intersect the Sentinel-2 raster with polygons
 
@@ -488,13 +521,15 @@ The goal of this step is to extract the reflectance values of all pixels of the 
 
 ```log
 INFO:root:Executing step: TutorialStep.PRODUCE_CLIPS
-INFO:root:array([[0.107 , 0.1152, 0.1041, 0.1073, 1.    ],
-       [0.1071, 0.1148, 0.1036, 0.1173, 1.    ],
-       [0.1097, 0.1175, 0.1047, 0.13  , 1.    ],
-       ...,
-       [0.1963, 0.1785, 0.1435, 0.3284, 3.    ],
-       [0.2053, 0.1794, 0.1456, 0.3005, 3.    ],
-       [0.2078, 0.1793, 0.1443, 0.2912, 3.    ]])
+INFO:root:classified_rgb_rows:
+<xarray.Dataset>
+Dimensions:      (band: 4, z: 3113)
+Coordinates:
+  * band         (band) <U3 'B04' 'B03' 'B02' 'B8A'
+Dimensions without coordinates: z
+Data variables:
+    reflectance  (band, z) float32 0.007 0.0071 0.0097 ... 0.2284 0.2005 0.1912
+    feature_id   (z) int64 1 1 1 1 1 1 1 1 1 1 1 1 1 ... 3 3 3 3 3 3 3 3 3 3 3 3
 ```
 
 ### (5) Persist the intersection to a CSV
@@ -506,9 +541,11 @@ def persist_to_csv(
 ) -> None:
 ```
 
-:arrow_forward: With the help of a pandas DataFrame, output the previously obtained numpy array of colors and class to a CSV File. Columns must be all the Colors, followed by the integer representing the class of the pixel.
+:arrow_forward: With the help of a pandas DataFrame, output the previously obtained numpy array of band names and class to a CSV File. Columns must be all the band names, followed by the integer representing the class of the pixel.
 
 #### Expected result
+
+##### Logs
 
 ```log
 INFO:root:Executing step: TutorialStep.PERSIST_TO_CSV
@@ -518,18 +555,17 @@ INFO:root:Written CSV output generated\classified_points.csv
 Excerpt from an example of a generated file:
 
 ```csv
-B04;B03;B02;B8A;feature_key
-0.107;0.1152;0.1041;0.1073;1
-0.1071;0.1148;0.1036;0.1173;1
-0.1097;0.1175;0.1047;0.13;1
-...
-0.1233;0.1262;0.1043;0.3333;2
-0.1332;0.1342;0.1101;0.3446;2
-0.1283;0.1336;0.1085;0.3442;2
-...
-0.1963;0.1785;0.1435;0.3284;3
-0.2053;0.1794;0.1456;0.3005;3
-0.2078;0.1793;0.1443;0.2912;3
+B04;B03;B02;B8A;feature_id
+0.007;0.0152;0.0041;0.0073;1
+0.0071;0.0148;0.0036;0.0173;1
+0.0097;0.0175;0.0047;0.03;1
+0.014;0.0218;0.0067;0.0476;1
+0.0064;0.0155;0.004;0.0073;1
+0.0063;0.0148;0.0038;0.0081;1
+0.0068;0.0141;0.0037;0.0062;1
+0.0062;0.0138;0.0035;0.0046;1
+0.0068;0.0143;0.0039;0.0052;1
+0.0064;0.0136;0.004;0.0068;1
 ```
 
 ### (6) Train a machine learning model
@@ -557,16 +593,28 @@ We will now use the tools provided by `scikit-learn` to classify the rest of the
 
 #### Expected result
 
+##### Logs
+
 ```log
 INFO:root:Executing step: TutorialStep.CLASSIFY_SENTINEL_DATA
-INFO:root:array([[3, 3, 3, ..., 2, 2, 2],
+INFO:root:classification_result:
+<xarray.DataArray (y: 1830, x: 1830)>
+array([[3, 3, 2, ..., 2, 2, 2],
        [3, 3, 3, ..., 2, 2, 2],
        [3, 2, 2, ..., 2, 2, 2],
        ...,
        [2, 2, 2, ..., 3, 2, 2],
        [2, 2, 2, ..., 3, 3, 3],
-       [2, 2, 3, ..., 3, 3, 3]])
+       [2, 2, 2, ..., 3, 3, 3]], dtype=int64)
+Coordinates:
+  * x            (x) float64 3e+05 3.001e+05 3.002e+05 ... 4.097e+05 4.098e+05
+  * y            (y) float64 4.9e+06 4.9e+06 4.9e+06 ... 4.79e+06 4.79e+06
+    spatial_ref  int32 0
 ```
+
+##### Plot
+
+![picture 2](docs/assets/images/68c20b3411353f288c3d83755052197f545efa6e10658e27efcf0f7748afcfd1.png)
 
 ~~### Add the NIR band to get better results~~
 
@@ -592,6 +640,8 @@ The main difficulty here is to reconstruct a new raster from the classification 
 
 #### Expected result
 
+##### Logs
+
 ```log
 INFO:root:Executing step: TutorialStep.PERSIST_CLASSIFICATION_TO_RASTER
 INFO:root:Written Classified Raster to generated\classified_points.csv
@@ -612,11 +662,21 @@ If you have any questions or feedback regarding this tutorial, please contact me
 
 ## Improvements ideas
 
+Application-specific
+
 - In the step (1), the GeoJSON is converted to the raster's CRS, but this is hardcoded. A better way would be to retrieved the CRS directly from the Sentinel-2 raster. Note that this means the step (1) would now depend on (2). The CRS can be accessed via the `crs` attribute on the `rio` accessor of the raster. See [Accessing the CRS object](https://corteva.github.io/rioxarray/stable/getting_started/crs_management.html#Accessing-the-CRS-object)
+- In the step (2), Use [`stackstac`](https://stackstac.readthedocs.io/en/latest/basic.html) to query the Sentinel-2 raster without having to manually download it via the Sentinel Hub Web UI. Sections of the raster also can be selected, rather than the whole.
+- In the step (3), Rasterization of GeoJSON: Instead of rasterizing the polygons to the same shape of the rasters, extract only the area containing them. This would save unnessary zeroes surrounding the polygons (the rasterized polygon mask has very low information density)
+- Explore the step (6): Try other classes, or unsupervized learning?
 - You can add another step to persist the model, so it can be computed once and then reused on other images, rather than recalculating it on each script execution
-- Use [`stackstac`](https://stackstac.readthedocs.io/en/latest/basic.html) to query the Sentinel-2 raster without having to manually download it via the Web UI. Sections of the raster also can be selected, rather than the whole.
 - You can export the palette with python and auto import in QGIS
 - You can show the legend for classes
+
+Python-specific
+
+- [ ] Use `click` instead of `argparse` for the UI
+- [ ] Use notebooks to run the custom implementations, for easier testing?
+- [ ] Do not hardcode tutorial step, instead catch the NotImplemented exception at runtime and exit gracefully (display plots)
 
 ## History
 
