@@ -16,18 +16,19 @@ Use RGB rasters (find band naming convention) in `S2A_MSIL2A_20221116T105321_N04
 """
 
 import argparse
-import logging
 from enum import Enum
 from pathlib import Path
-from pprint import pformat
 
 import matplotlib.pyplot as plt
-import numpy as np
-import numpy.typing as npt
-import xarray as xr
-from geopandas.geodataframe import GeoDataFrame
 
 from training_raster_clipper.implementation import eschalk, iatraoui, rskandrani
+from training_raster_clipper.core.visualization import (
+    plot_rgb_data_array,
+    plot_array,
+    plot_geodataframe,
+)
+from training_raster_clipper.core.logging import log_info
+import logging
 
 CHEAT_MODE_IMPLEMENTATION = "eschalk"
 
@@ -79,7 +80,7 @@ def main():
             f"Please choose one step among {list(e.name for e in TutorialStep)}"
         )
 
-    info(args)
+    log_info(args)
 
     resolution = 60
     band_names = ("B04", "B03", "B02", "B8A")
@@ -90,11 +91,9 @@ def main():
     interrupt_if_step_reached(tutorial_step, current_step)
     polygons = interface.load_feature_polygons(polygons_input_path)
     if verbose:
-        info(polygons, "polygons")
+        log_info(polygons, "polygons")
     if show_plots:
-        plot_geodataframe(
-            polygons, f"({int(current_step.value/100)}: {current_step.name})"
-        )
+        plot_geodataframe(polygons, render_tutorial_step(current_step))
 
     # --
 
@@ -102,12 +101,9 @@ def main():
     interrupt_if_step_reached(tutorial_step, current_step)
     rasters = interface.load_sentinel_data(raster_input_path, resolution, band_names)
     if verbose:
-        info(rasters, "rasters")
+        log_info(rasters, "rasters")
     if show_plots:
-        plot_rgb_data_array(
-            rasters,
-            f"({int(current_step.value/100)}: {current_step.name})",
-        )
+        plot_rgb_data_array(rasters, render_tutorial_step(current_step))
 
     # --
 
@@ -115,12 +111,10 @@ def main():
     interrupt_if_step_reached(tutorial_step, current_step)
     burnt_polygons, mapping = interface.rasterize_geojson(rasters, polygons)
     if verbose:
-        info(burnt_polygons, "burnt_polygons")
-        info(mapping, "mapping")
+        log_info(burnt_polygons, "burnt_polygons")
+        log_info(mapping, "mapping")
     if show_plots:
-        plot_ndarray(
-            burnt_polygons, f"({int(current_step.value/100)}: {current_step.name})"
-        )
+        plot_array(burnt_polygons, render_tutorial_step(current_step))
 
     # --
 
@@ -128,14 +122,14 @@ def main():
     interrupt_if_step_reached(tutorial_step, current_step)
     classified_rgb_rows = interface.produce_clips(rasters, burnt_polygons, mapping)
     if verbose:
-        info(classified_rgb_rows, "classified_rgb_rows")
+        log_info(classified_rgb_rows, "classified_rgb_rows")
 
     # --
 
     current_step = TutorialStep.PERSIST_TO_CSV
     interrupt_if_step_reached(tutorial_step, current_step)
     interface.persist_to_csv(classified_rgb_rows, csv_output_path)
-    info(f"Written CSV output {csv_output_path}")
+    log_info(f"Written CSV output {csv_output_path}")
 
     # --
 
@@ -145,12 +139,9 @@ def main():
         rasters, classified_rgb_rows
     )
     if verbose:
-        info(classification_result, "classification_result")
+        log_info(classification_result, "classification_result")
     if show_plots:
-        plot_ndarray(
-            classification_result,
-            f"({int(current_step.value/100)}: {current_step.name})",
-        )
+        plot_array(classification_result, render_tutorial_step(current_step))
 
     # --
 
@@ -159,14 +150,18 @@ def main():
     interface.persist_classification_to_raster(
         raster_output_path, classification_result
     )
-    info(f"Written Classified Raster to {csv_output_path}")
+    log_info(f"Written Classified Raster to {csv_output_path}")
 
     # --
 
-    info("Congratulations, you reached the end of the tutorial!")
+    log_info("Congratulations, you reached the end of the tutorial!")
 
     current_step = TutorialStep.END
     interrupt_if_step_reached(tutorial_step, current_step)
+
+
+def render_tutorial_step(current_step):
+    return f"({int(current_step.value/100)}: {current_step.name})"
 
 
 def interrupt_if_step_reached(
@@ -176,10 +171,10 @@ def interrupt_if_step_reached(
         max_tutorial_step == TutorialStep.END
     ):
         plt.show(block=True)
-        info(f"Exit after step {tutorial_step}")
+        log_info(f"Exit after step {tutorial_step}")
         exit()
     else:
-        info(f"Executing step: {max_tutorial_step}")
+        log_info(f"Executing step: {max_tutorial_step}")
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -261,45 +256,6 @@ def parse_arguments(argument_parser: argparse.ArgumentParser):
         assert args.implementation
 
     return args
-
-
-def info(
-    object,
-    /,
-    variable_name=None,
-):
-    if variable_name:
-        if type(object) == str:
-            logging.info(f"{variable_name}:\n{object}")
-        else:
-            logging.info(f"{variable_name}:\n{pformat(object)}")
-    else:
-        if type(object) == str:
-            logging.info(object)
-        else:
-            logging.info(pformat(object))
-
-
-def plot_rgb_data_array(xds: xr.DataArray, title: str):
-    plt.figure()
-
-    ax = xds.sel(band=["B04", "B03", "B02"]).plot.imshow(vmax=np.percentile(xds, 95))
-    ax.axes.set_aspect("equal")
-    ax.axes.set_title(title)
-
-
-def plot_ndarray(array: npt.NDArray[np.uint8], title: str):
-    plt.figure()
-
-    ax = plt.imshow(array)
-    ax.axes.set_aspect("equal")
-    ax.axes.set_title(title)
-
-
-def plot_geodataframe(gdf: GeoDataFrame, title: str):
-    ax = gdf.plot(legend=True, color=gdf["color"])
-    ax.axes.set_aspect("equal")
-    ax.axes.set_title(title)
 
 
 if __name__ == "__main__":

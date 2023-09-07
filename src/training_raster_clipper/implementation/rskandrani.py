@@ -2,7 +2,10 @@ from pathlib import Path
 
 import xarray as xr
 from geopandas.geodataframe import GeoDataFrame
-
+from rioxarray import open_rasterio
+from geopandas import read_file
+import os
+import numpy as np
 from training_raster_clipper.custom_types import (
     BandNameType,
     ClassificationResult,
@@ -14,8 +17,8 @@ from training_raster_clipper.custom_types import (
 
 
 def load_feature_polygons(input_path: Path) -> GeoDataFrame:
-    ...  # TODO
-    raise NotImplementedError
+    geodf = read_file(input_path)
+    return GeoDataFrame(geodf, crs=4326)
 
 
 def load_sentinel_data(
@@ -33,9 +36,34 @@ def load_sentinel_data(
     Returns:
         xr.DataArray: A DataArray containing the 3 RGB bands from the visible spectrum
     """
+    RADIO_ADD_OFFSET = -1000
+    QUANTIFICATION_VALUE = 10000
 
-    ...  # TODO
-    raise NotImplementedError
+    dict_bands = {}
+    if len(band_names) == 0:
+        return print("no bands selected")
+    for band in band_names:
+        dict_bands[band] = sorted(
+            Path(sentinel_product_location).glob(
+                f"GRANULE/*/IMG_DATA/R{resolution}m/*_{band}_*"
+            )
+        )[0]
+
+    list_dataarray = []
+
+    for band_name, raster_path in dict_bands.items():
+        raster = open_rasterio(raster_path)
+
+        list_dataarray.append(raster.assign_coords({"band": [band_name]}))
+
+    rasters_concat = xr.concat(list_dataarray, dim="band")
+    print(type(rasters_concat))
+    result = xr.where(
+        rasters_concat == 0,
+        np.float32(np.NaN),
+        (rasters_concat - RADIO_ADD_OFFSET) / QUANTIFICATION_VALUE,
+    )
+    return result
 
 
 def rasterize_geojson(
