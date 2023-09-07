@@ -42,13 +42,6 @@ def load_sentinel_data(
         xr.DataArray: A DataArray containing the 3 RGB bands from the visible spectrum
     """
 
-    # ...  # TODO
-    # raise NotImplementedError
-    # p = Path(sentinel_product_location)
-    # paths_list = [x for x in p.iterdir() if x.is_file()]
-    # colors_list = [str(x).split('_')[-2] for x in paths_list]
-    # data_dict = dict(zip(colors_list, paths_list))
-    # data_arrays_list = 
     paths_list = {
         band_name : list(sentinel_product_location.glob(f'GRANULE/*/IMG_DATA/R{resolution}m/*_{band_name}_*'))[0]
         for band_name in band_names
@@ -56,9 +49,9 @@ def load_sentinel_data(
     data_arrays_list = [open_rasterio(paths_list[band_name]).assign_coords({'band' : [band_name]}) for band_name in band_names]
     rasters_data_array = xr.concat(data_arrays_list, dim = 'band')
     rasters_data_array = rasters_data_array.where(rasters_data_array != 0, np.float32(np.nan))
-    RADIO_ADD_OFFSET = -1000
-    QUANTIFICATION_VALUE = 10000
-    result = ((rasters_data_array + RADIO_ADD_OFFSET) / QUANTIFICATION_VALUE)
+    radio_add_offset = -1000
+    quantification_value = 10000
+    result = (rasters_data_array + radio_add_offset) / quantification_value
     return result
 
 
