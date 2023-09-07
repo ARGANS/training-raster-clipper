@@ -61,7 +61,8 @@
                 // "--cheat", // cheat mode, to use the solutions  
                 "--tutorial_step",
                 // "LOAD_FEATURE_POLYGONS",
-                "LOAD_SENTINEL_DATA",
+                // "LOAD_SENTINEL_DATA",
+                "RASTERIZE_GEOJSON",
                 // "END",
 
             ],
