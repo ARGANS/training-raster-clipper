@@ -18,7 +18,7 @@ from training_raster_clipper.custom_types import (
 
 def load_feature_polygons(input_path: Path) -> GeoDataFrame:
     geodf = read_file(input_path)
-    return GeoDataFrame(geodf,crs=4326)
+    return GeoDataFrame(geodf, crs=4326)
 
 
 def load_sentinel_data(
@@ -37,32 +37,30 @@ def load_sentinel_data(
         xr.DataArray: A DataArray containing the 3 RGB bands from the visible spectrum
     """
     dict_bands = {}
-    if len(band_names)==0:
-        return print('no bands selected')
-    for band in band_names :
-        dict_bands[band]=sorted(Path(sentinel_product_location).glob(f'GRANULE/*/IMG_DATA/R{resolution}m/*_{band}_*'))[0]
-    
-    list_dataarray =  []
+    if len(band_names) == 0:
+        return print("no bands selected")
+    for band in band_names:
+        dict_bands[band] = sorted(
+            Path(sentinel_product_location).glob(
+                f"GRANULE/*/IMG_DATA/R{resolution}m/*_{band}_*"
+            )
+        )[0]
+
+    list_dataarray = []
 
     for band_name, raster_path in dict_bands.items():
         raster = open_rasterio(raster_path)
-        
-        list_dataarray.append(raster.assign_coords({'band': [band_name]}))
+
+        list_dataarray.append(raster.assign_coords({"band": [band_name]}))
 
     print(type(list_dataarray[0]))
 
-    rasters_concat = xr.concat(list_dataarray,dim = "band")
+    rasters_concat = xr.concat(list_dataarray, dim="band")
     print(type(rasters_concat))
-    result = xr.where(rasters_concat==0,np.float32(np.NaN),(rasters_concat-1000)/10000)
+    result = xr.where(
+        rasters_concat == 0, np.float32(np.NaN), (rasters_concat - 1000) / 10000
+    )
     return result
-
-
-    
-    
-
-
-    
-        
 
 
 def rasterize_geojson(
