@@ -36,6 +36,9 @@ def load_sentinel_data(
     Returns:
         xr.DataArray: A DataArray containing the 3 RGB bands from the visible spectrum
     """
+    RADIO_ADD_OFFSET = -1000
+    QUANTIFICATION_VALUE = 10000
+
     dict_bands = {}
     if len(band_names) == 0:
         return print("no bands selected")
@@ -58,7 +61,9 @@ def load_sentinel_data(
     rasters_concat = xr.concat(list_dataarray, dim="band")
     print(type(rasters_concat))
     result = xr.where(
-        rasters_concat == 0, np.float32(np.NaN), (rasters_concat - 1000) / 10000
+        rasters_concat == 0,
+        np.float32(np.NaN),
+        (rasters_concat - RADIO_ADD_OFFSET) / QUANTIFICATION_VALUE,
     )
     return result
 
