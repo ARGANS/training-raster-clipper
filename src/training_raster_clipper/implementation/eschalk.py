@@ -134,6 +134,49 @@ def produce_clips(
         A list of the RGB values contained in the data_array and their corresponding classes
     """
 
+    # Wrap the polygons' numpy array into an xarray DataArray fore easier work.
+    # Copy a band-slice of the reflectances and use the polygons data instead.
+    # The general pattern "isel coord = 0" means, we just want to extract a
+    # representative slice of the data cube.
+    # burnt_polygons_xda = xda.isel(band=0, drop=True).copy(data=burnt_polygons)
+
+    # The stack method is used to "compress" the y and x dimension to a new 1-D z ones,
+    # allowing for selection using `sel`, avoiding the more heavy `where`.
+    # It avoids having to deal with the NaNs that `where` produce.
+
+    # y, x order matters here
+    reflectance_da = data_array.stack(z=("y", "x")).drop_vars(("y", "x"))
+    # reflectance_da = data_array.stack(z=("y", "x")).drop_vars(("y", "x", "spatial_ref"))
+    # reflectance_da = data_array.stack(z=("x", "y")).drop_vars(("y", "x", "spatial_ref"))
+    feature_id_da = xr.DataArray(data=burnt_polygons.reshape(-1), dims="z")
+
+    # The dataset contains two variables:
+    # - The original reflectances, (band, z)-dependant
+    # - The feature class the pixels belong to, z-dependant
+    # This will be fed as an input to the model later.
+    classified_samples_dataset = xr.Dataset(
+        {
+            "reflectance": reflectance_da,
+            "feature_id": feature_id_da,
+        }
+    ).sel(z=feature_id_da != 0)
+
+    return classified_samples_dataset
+
+
+def _produce_clips_old(
+    data_array: xr.DataArray, burnt_polygons: PolygonMask, mapping: FeatureClassNameToId
+) -> ClassifiedSamples:
+    """Extract RGB values covered by classified polygons
+
+    Args:
+        data_array (xr.DataArray): RGB raster
+        burnt_polygons (PolygonMask): Rasterized classified multipolygons
+
+    Returns:
+        A list of the RGB values contained in the data_array and their corresponding classes
+    """
+
     xda = data_array
 
     # Wrap the polygons' numpy array into an xarray DataArray fore easier work.
@@ -141,6 +184,8 @@ def produce_clips(
     # The general pattern "isel coord = 0" means, we just want to extract a
     # representative slice of the data cube.
     burnt_polygons_xda = xda.isel(band=0, drop=True).copy(data=burnt_polygons)
+
+    # Note: This code could avoid the loop over the feature id. (See produce_clips)
 
     # Extract reflectance values for all bands of all indices matching the predicate:
     # "the polygon mask matches the current class in the loop".
@@ -201,10 +246,9 @@ def classify_sentinel_data(
 
     model.fit(training_input_samples, class_labels)
 
-    reference_2d_array = rasters.isel(band=0, drop=True)
-
     classes = model.predict(rasters.stack(z=("y", "x")).T)
 
+    reference_2d_array = rasters.isel(band=0, drop=True)
     classes_xda = reference_2d_array.copy(
         data=classes.reshape(reference_2d_array.shape)
     )
