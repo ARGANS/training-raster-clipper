@@ -9,5 +9,8 @@
   "workbench.colorCustomizations": {
     "editor.selectionBackground": "#ffff0044",
     "editor.selectionHighlightBackground": "#ff00ff88"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
   }
 }
