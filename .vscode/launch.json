@@ -81,7 +81,7 @@
                 "--raster_input_path",
                 "D:/Profils/rskandrani/Desktop/tutoriel S1/S2A_MSIL2A_20230823T104631_N0509_R051_T31TCJ_20230823T170355.SAFE",
                 "--polygons_input_path",
-                "D:/Profils/rskandrani/Desktop/tutoriel S1/polygons.geojson",
+                "D:/Profils/rskandrani/Desktop/tutoriel S1/polygons_rf.geojson",
                 "--csv_output_path",
                 "generated/classified_points.csv",
                 "--raster_output_path",
