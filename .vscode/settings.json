@@ -8,8 +8,8 @@
   },
   "workbench.colorCustomizations": {
     "editor.selectionBackground": "#ffff0044",
-    "titleBar.activeBackground": "#004750",
-    "editor.selectionHighlightBackground": "#ff00ff88"
+    "editor.selectionHighlightBackground": "#ff00ff88",
+    "titleBar.activeBackground": "#004750"
   },
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"
