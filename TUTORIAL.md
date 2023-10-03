@@ -320,7 +320,6 @@ Since the GeoJSON is in a `4326` EPSG format, we convert it to the one used by t
 ##### Logs
 
 ```log
-INFO:root:Executing step: TutorialStep.LOAD_FEATURE_POLYGONS
 INFO:root:polygons:
    id   class    color                                           geometry
 0 NaN   WATER  #0094FF  MULTIPOLYGON (((366356.635 4843608.195, 366742...
@@ -404,7 +403,6 @@ Ensure the resulting DataArray is a `np.float32`
 ##### Logs
 
 ```log
-INFO:root:Executing step: TutorialStep.LOAD_SENTINEL_DATA
 INFO:root:rasters:
 <xarray.DataArray (band: 4, y: 1830, x: 1830)>
 array([[[0.072 , 0.0677, 0.0614, ..., 0.0329, 0.0313, 0.0291],
@@ -488,7 +486,6 @@ The goal is to obtain a raster mask that will be later used to extract the refle
 ##### Logs
 
 ```log
-INFO:root:Executing step: TutorialStep.RASTERIZE_GEOJSON
 INFO:root:burnt_polygons:
 array([[0, 0, 0, ..., 0, 0, 0],
        [0, 0, 0, ..., 0, 0, 0],
@@ -520,7 +517,6 @@ The goal of this step is to extract the reflectance values of all pixels of the 
 #### Expected result
 
 ```log
-INFO:root:Executing step: TutorialStep.PRODUCE_CLIPS
 INFO:root:classified_rgb_rows:
 <xarray.Dataset>
 Dimensions:      (band: 4, z: 3113)
@@ -548,7 +544,6 @@ def persist_to_csv(
 ##### Logs
 
 ```log
-INFO:root:Executing step: TutorialStep.PERSIST_TO_CSV
 INFO:root:Written CSV output generated\classified_points.csv
 ```
 
@@ -596,7 +591,6 @@ We will now use the tools provided by `scikit-learn` to classify the rest of the
 ##### Logs
 
 ```log
-INFO:root:Executing step: TutorialStep.CLASSIFY_SENTINEL_DATA
 INFO:root:classification_result:
 <xarray.DataArray (y: 1830, x: 1830)>
 array([[3, 3, 2, ..., 2, 2, 2],
@@ -605,7 +599,7 @@ array([[3, 3, 2, ..., 2, 2, 2],
        ...,
        [2, 2, 2, ..., 3, 2, 2],
        [2, 2, 2, ..., 3, 3, 3],
-       [2, 2, 2, ..., 3, 3, 3]], dtype=int64)
+       [2, 2, 3, ..., 3, 3, 3]], dtype=int64)
 Coordinates:
   * x            (x) float64 3e+05 3.001e+05 3.002e+05 ... 4.097e+05 4.098e+05
   * y            (y) float64 4.9e+06 4.9e+06 4.9e+06 ... 4.79e+06 4.79e+06
@@ -643,7 +637,6 @@ The main difficulty here is to reconstruct a new raster from the classification 
 ##### Logs
 
 ```log
-INFO:root:Executing step: TutorialStep.PERSIST_CLASSIFICATION_TO_RASTER
 INFO:root:Written Classified Raster to generated\classified_points.csv
 INFO:root:Congratulations, you reached the end of the tutorial!
 ```
