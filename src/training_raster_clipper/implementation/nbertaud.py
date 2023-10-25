@@ -46,9 +46,7 @@ def load_sentinel_data(
     spatial_resolution_location = list(sentinel_product_location.glob(f"GRANULE/*/IMG_DATA/R{resolution}m"))[0]
 
     # Find the path of the bands
-    band_locations = {}
-    for band_name in band_names:
-        band_locations[band_name] = list(spatial_resolution_location.glob(f"*_{band_name}_*"))[0]
+    band_locations = {band_name: list(spatial_resolution_location.glob(f"*_{band_name}_*"))[0] for band_name in band_names}
 
     # Read the band raster
     combined_data_array = []
@@ -93,7 +91,7 @@ def rasterize_geojson(
     transform = rasterio.transform.Affine.from_gdal(*transform)
 
     # Find array shape
-    array_shape = data_array.shape[1:]
+    array_shape = data_array.isel(band=0).shape
 
     # Regroup class if in the GeoJSON file there are multiple instances of the same class
     dict_classes = {}
@@ -128,11 +126,11 @@ def produce_clips(
     Returns:
         _type_: A list of the RGB values contained in the data_array and their corresponding classes
     """
-    # Flatten list in (x,y) dimension
+    # Flatten list in (y, x) dimension
     band_array = data_array.stack(flatten=("y", "x"))
     class_array = xr.DataArray(burnt_polygons.reshape(-1), dims="flatten")
 
-    # Fusion the arrays
+    # Group the arrays
     classified_dataset = xr.Dataset({"reflectance": band_array, "label": class_array})
 
     # Remove every element where class is not set
@@ -182,7 +180,7 @@ def classify_sentinel_data(
     rasters_numpy = rasters.values
     predictions = rf_clf.predict(rasters_numpy.reshape(4, -1).T)
 
-    predictions = predictions.reshape(rasters_numpy.shape[1:])
+    predictions = predictions.reshape(rasters.isel(band=0).shape)
     classification_result = rasters.isel(band=0).copy(data=predictions)
 
     return classification_result
