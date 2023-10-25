@@ -21,7 +21,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from training_raster_clipper.implementation import eschalk, iatraoui, rskandrani
+from training_raster_clipper.implementation import eschalk, iatraoui, rskandrani, nbertaud
 from training_raster_clipper.core.visualization import (
     plot_rgb_data_array,
     plot_array,
@@ -63,6 +63,7 @@ def main():
         "eschalk": eschalk,
         "iatraoui": iatraoui,
         "rskandrani": rskandrani,
+        "nbertaud": nbertaud
     }
     assert implementation in implementations
 
